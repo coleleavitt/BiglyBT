@@ -1,9 +1,3 @@
-/*
- * BiglyBT Extreme Mod - Spoofing HTTP Connection
- * 
- * Wraps the real HttpURLConnection and intercepts header operations
- * to inject spoofed headers based on the current client profile.
- */
 package ghostfucker.http;
 
 import ghostfucker.spoof.PerfectSpoof;
@@ -11,6 +5,7 @@ import ghostfucker.spoof.PerfectSpoof;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.Proxy;
@@ -19,70 +14,55 @@ import java.security.Permission;
 import java.util.List;
 import java.util.Map;
 
-/**
- * HTTP connection wrapper that injects spoofed headers.
- * 
- * This class wraps the real HttpURLConnection (obtained via direct
- * instantiation of sun.net.www.protocol.http.HttpURLConnection)
- * and intercepts header operations to apply spoofing.
- */
 public class SpoofingHttpURLConnection extends HttpURLConnection {
     
-    /** The real connection being wrapped */
+    private static final Constructor<? extends HttpURLConnection> HTTP_CONNECTION_CTOR;
+    
+    static {
+        Constructor<? extends HttpURLConnection> ctor = null;
+        try {
+            @SuppressWarnings("unchecked")
+            Class<? extends HttpURLConnection> clazz = 
+                (Class<? extends HttpURLConnection>) Class.forName("sun.net.www.protocol.http.HttpURLConnection");
+            ctor = clazz.getConstructor(URL.class, Proxy.class);
+            ctor.setAccessible(true);
+        } catch (Exception e) {
+            System.err.println("[GhostFucker] Failed to get HttpURLConnection constructor: " + e.getMessage());
+            System.err.println("[GhostFucker] Ensure JVM has: --add-opens java.base/sun.net.www.protocol.http=ALL-UNNAMED");
+        }
+        HTTP_CONNECTION_CTOR = ctor;
+    }
+    
     protected HttpURLConnection delegate;
-    
-    /** Whether headers have been spoofed for this connection */
     private boolean headersSpoofed = false;
-    
-    /** Request type for spoofing config lookup */
-    private byte requestType = 0; // 0 = ANNOUNCE, 1 = SCRAPE
+    private byte requestType = 0;
     
     public SpoofingHttpURLConnection(URL url, Proxy proxy) throws IOException {
         super(url);
-        
-        // Create the real connection using reflection to access internal class
         this.delegate = createRealConnection(url, proxy);
     }
     
-    /**
-     * Creates the real HttpURLConnection using the default handler.
-     * We need to bypass our own handler to avoid infinite recursion.
-     */
     private HttpURLConnection createRealConnection(URL url, Proxy proxy) throws IOException {
+        if (HTTP_CONNECTION_CTOR == null) {
+            throw new IOException("HTTP interception not available - missing JVM --add-opens flags");
+        }
+        
         try {
-            // Use reflection to instantiate the real sun.net.www.protocol.http.HttpURLConnection
-            Class<?> handlerClass = Class.forName("sun.net.www.protocol.http.Handler");
-            java.net.URLStreamHandler handler = (java.net.URLStreamHandler) handlerClass.getDeclaredConstructor().newInstance();
-            
-            // Create URL with our handler to bypass SPI lookup
-            URL realUrl = new URL(url, url.toString(), handler);
-            
-            if (proxy != null) {
-                return (HttpURLConnection) realUrl.openConnection(proxy);
-            } else {
-                return (HttpURLConnection) realUrl.openConnection();
-            }
-        } catch (ReflectiveOperationException e) {
-            throw new IOException("Failed to create real HTTP connection", e);
+            Proxy effectiveProxy = (proxy != null) ? proxy : Proxy.NO_PROXY;
+            return HTTP_CONNECTION_CTOR.newInstance(url, effectiveProxy);
+        } catch (Exception e) {
+            throw new IOException("Failed to create HTTP connection: " + e.getMessage(), e);
         }
     }
     
-    /**
-     * Determines the request type based on URL path.
-     */
     private byte detectRequestType() {
         String path = url.getPath();
-        if (path != null) {
-            if (path.contains("scrape")) {
-                return 1; // SCRAPE
-            }
+        if (path != null && path.contains("scrape")) {
+            return 1;
         }
-        return 0; // ANNOUNCE (default)
+        return 0;
     }
     
-    /**
-     * Injects spoofed headers before the connection is made.
-     */
     private void injectSpoofedHeaders() {
         if (headersSpoofed) {
             return;
@@ -94,7 +74,6 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
             return;
         }
         
-        // Get the spoofed headers for this request type
         this.requestType = detectRequestType();
         String[][] headers = spoof.getHttpHeaders(requestType);
         
@@ -102,7 +81,6 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
             return;
         }
         
-        // Build host header value
         String host = url.getHost();
         int port = url.getPort();
         String portStr = "";
@@ -113,7 +91,6 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
             portStr = ":" + (url.getProtocol().equals("https") ? 443 : 80);
         }
         
-        // Apply each header
         for (String[] header : headers) {
             if (header == null || header.length < 2) {
                 continue;
@@ -126,20 +103,15 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
                 continue;
             }
             
-            // Replace placeholders
             value = value.replace("{host}", host);
             value = value.replace(":{port}", portStr);
             
-            // Set the header on the real connection
             try {
                 delegate.setRequestProperty(name, value);
-            } catch (Exception e) {
-                // Ignore errors setting headers
+            } catch (Exception ignored) {
             }
         }
     }
-    
-    // ========== Override connection methods to inject headers ==========
     
     @Override
     public void connect() throws IOException {
@@ -172,8 +144,6 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
         return delegate.getResponseMessage();
     }
     
-    // ========== Delegate all other methods to the real connection ==========
-    
     @Override
     public void disconnect() {
         delegate.disconnect();
@@ -196,7 +166,6 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
     
     @Override
     public void setRequestProperty(String key, String value) {
-        // Allow user-set properties, they will be combined with spoofed ones
         delegate.setRequestProperty(key, value);
     }
     
@@ -353,6 +322,7 @@ public class SpoofingHttpURLConnection extends HttpURLConnection {
     }
     
     @Override
+    @SuppressWarnings("removal")
     public Permission getPermission() throws IOException {
         return delegate.getPermission();
     }

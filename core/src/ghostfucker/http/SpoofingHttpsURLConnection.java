@@ -1,9 +1,3 @@
-/*
- * BiglyBT Extreme Mod - Spoofing HTTPS Connection
- * 
- * Wraps the real HttpsURLConnection and intercepts header operations
- * to inject spoofed headers. Also provides SSL bypass capability.
- */
 package ghostfucker.http;
 
 import ghostfucker.spoof.PerfectSpoof;
@@ -12,6 +6,7 @@ import javax.net.ssl.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
 import java.net.ProtocolException;
 import java.net.Proxy;
 import java.net.URL;
@@ -22,40 +17,23 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 
-/**
- * HTTPS connection wrapper that injects spoofed headers and provides SSL bypass.
- * 
- * This class wraps the real HttpsURLConnection and intercepts header operations
- * to apply spoofing based on the current client profile.
- */
 public class SpoofingHttpsURLConnection extends HttpsURLConnection {
     
-    /** The real HTTPS connection being wrapped */
-    protected HttpsURLConnection delegate;
-    
-    /** Whether headers have been spoofed for this connection */
-    private boolean headersSpoofed = false;
-    
-    /** Whether SSL bypass is enabled */
+    private static final Constructor<? extends HttpsURLConnection> HTTPS_CONNECTION_CTOR;
+    private static final Object HTTPS_HANDLER;
+    private static volatile SSLContext permissiveSSLContext;
     private static volatile boolean sslBypassEnabled = true;
     
-    /** Shared permissive SSL context */
-    private static volatile SSLContext permissiveSSLContext;
-    
-    /** Shared permissive hostname verifier */
     private static final HostnameVerifier PERMISSIVE_HOSTNAME_VERIFIER = (hostname, session) -> true;
     
-    /** Trust manager that accepts all certificates */
     private static final TrustManager[] TRUST_ALL_CERTS = new TrustManager[] {
         new X509TrustManager() {
             @Override
             public void checkClientTrusted(X509Certificate[] chain, String authType) {
-                // Accept all
             }
             
             @Override
             public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                // Accept all
             }
             
             @Override
@@ -66,6 +44,24 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
     };
     
     static {
+        Constructor<? extends HttpsURLConnection> ctor = null;
+        Object handler = null;
+        try {
+            Class<?> handlerClass = Class.forName("sun.net.www.protocol.https.Handler");
+            handler = handlerClass.getDeclaredConstructor().newInstance();
+            
+            @SuppressWarnings("unchecked")
+            Class<? extends HttpsURLConnection> clazz = 
+                (Class<? extends HttpsURLConnection>) Class.forName("sun.net.www.protocol.https.HttpsURLConnectionImpl");
+            ctor = clazz.getDeclaredConstructor(URL.class, java.net.Proxy.class, handlerClass);
+            ctor.setAccessible(true);
+        } catch (Exception e) {
+            System.err.println("[GhostFucker] Failed to get HttpsURLConnection constructor: " + e.getMessage());
+            System.err.println("[GhostFucker] Ensure JVM has: --add-opens java.base/sun.net.www.protocol.https=ALL-UNNAMED");
+        }
+        HTTPS_CONNECTION_CTOR = ctor;
+        HTTPS_HANDLER = handler;
+        
         initializePermissiveSSLContext();
     }
     
@@ -75,13 +71,10 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
             ctx.init(null, TRUST_ALL_CERTS, new SecureRandom());
             permissiveSSLContext = ctx;
         } catch (Exception e) {
-            System.err.println("Failed to initialize permissive SSL context: " + e.getMessage());
+            System.err.println("[GhostFucker] Failed to initialize permissive SSL context: " + e.getMessage());
         }
     }
     
-    /**
-     * Enable or disable SSL certificate verification bypass.
-     */
     public static void setSSLBypassEnabled(boolean enabled) {
         sslBypassEnabled = enabled;
     }
@@ -90,55 +83,40 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
         return sslBypassEnabled;
     }
     
+    protected HttpsURLConnection delegate;
+    private boolean headersSpoofed = false;
+    
     public SpoofingHttpsURLConnection(URL url, Proxy proxy) throws IOException {
         super(url);
-        
-        // Create the real connection using reflection to access internal class
         this.delegate = createRealConnection(url, proxy);
         
-        // Apply SSL bypass if enabled
         if (sslBypassEnabled && permissiveSSLContext != null) {
             delegate.setSSLSocketFactory(permissiveSSLContext.getSocketFactory());
             delegate.setHostnameVerifier(PERMISSIVE_HOSTNAME_VERIFIER);
         }
     }
     
-    /**
-     * Creates the real HttpsURLConnection using the default handler.
-     */
     private HttpsURLConnection createRealConnection(URL url, Proxy proxy) throws IOException {
+        if (HTTPS_CONNECTION_CTOR == null || HTTPS_HANDLER == null) {
+            throw new IOException("HTTPS interception not available - missing JVM --add-opens flags");
+        }
+        
         try {
-            // Use reflection to instantiate the real sun.net.www.protocol.https.Handler
-            Class<?> handlerClass = Class.forName("sun.net.www.protocol.https.Handler");
-            java.net.URLStreamHandler handler = (java.net.URLStreamHandler) handlerClass.getDeclaredConstructor().newInstance();
-            
-            // Create URL with our handler to bypass SPI lookup
-            URL realUrl = new URL(url, url.toString(), handler);
-            
-            if (proxy != null) {
-                return (HttpsURLConnection) realUrl.openConnection(proxy);
-            } else {
-                return (HttpsURLConnection) realUrl.openConnection();
-            }
-        } catch (ReflectiveOperationException e) {
-            throw new IOException("Failed to create real HTTPS connection", e);
+            Proxy effectiveProxy = (proxy != null) ? proxy : Proxy.NO_PROXY;
+            return HTTPS_CONNECTION_CTOR.newInstance(url, effectiveProxy, HTTPS_HANDLER);
+        } catch (Exception e) {
+            throw new IOException("Failed to create HTTPS connection: " + e.getMessage(), e);
         }
     }
     
-    /**
-     * Determines the request type based on URL path.
-     */
     private byte detectRequestType() {
         String path = url.getPath();
         if (path != null && path.contains("scrape")) {
-            return 1; // SCRAPE
+            return 1;
         }
-        return 0; // ANNOUNCE (default)
+        return 0;
     }
     
-    /**
-     * Injects spoofed headers before the connection is made.
-     */
     private void injectSpoofedHeaders() {
         if (headersSpoofed) {
             return;
@@ -150,7 +128,6 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
             return;
         }
         
-        // Get the spoofed headers for this request type
         byte requestType = detectRequestType();
         String[][] headers = spoof.getHttpHeaders(requestType);
         
@@ -158,7 +135,6 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
             return;
         }
         
-        // Build host header value
         String host = url.getHost();
         int port = url.getPort();
         String portStr = "";
@@ -169,7 +145,6 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
             portStr = ":443";
         }
         
-        // Apply each header
         for (String[] header : headers) {
             if (header == null || header.length < 2) {
                 continue;
@@ -182,20 +157,15 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
                 continue;
             }
             
-            // Replace placeholders
             value = value.replace("{host}", host);
             value = value.replace(":{port}", portStr);
             
-            // Set the header on the real connection
             try {
                 delegate.setRequestProperty(name, value);
-            } catch (Exception e) {
-                // Ignore errors setting headers
+            } catch (Exception ignored) {
             }
         }
     }
-    
-    // ========== HttpsURLConnection-specific methods ==========
     
     @Override
     public String getCipherSuite() {
@@ -242,8 +212,6 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
         return delegate.getSSLSocketFactory();
     }
     
-    // ========== Override connection methods to inject headers ==========
-    
     @Override
     public void connect() throws IOException {
         injectSpoofedHeaders();
@@ -274,8 +242,6 @@ public class SpoofingHttpsURLConnection extends HttpsURLConnection {
         injectSpoofedHeaders();
         return delegate.getResponseMessage();
     }
-    
-    // ========== Delegate all other methods to the real connection ==========
     
     @Override
     public void disconnect() {
