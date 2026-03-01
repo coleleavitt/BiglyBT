@@ -8255,4 +8255,13 @@ DownloadManagerImpl
 	{
 		// Trigger stats refresh if needed
 	}
+
+	private Runnable uploadKickerRefreshRunnable;
+
+	@Override
+	public void
+	setUploadKickerRefreshRunnable(Runnable runnable)
+	{
+		this.uploadKickerRefreshRunnable = runnable;
+	}
 }

@@ -971,4 +971,5 @@ DownloadManager
 	float getUploadKickerValue();
 	void setUploadKickerValue(float value);
 	void refreshUploadKickerValue();
+	void setUploadKickerRefreshRunnable(Runnable runnable);
 }
