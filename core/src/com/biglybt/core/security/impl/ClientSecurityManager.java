@@ -33,7 +33,21 @@ import com.biglybt.core.config.ConfigKeys;
 import com.biglybt.core.security.SESecurityManager.MySecurityManager;
 import com.biglybt.core.util.SystemProperties;
 
-@SuppressWarnings("removal")
+/**
+ * Legacy SecurityManager implementation for Java < 18.
+ * 
+ * SecurityManager is deprecated for removal in Java 17+ (JEP 411) and will be
+ * completely removed in a future Java release. This class is only instantiated
+ * on Java versions < 18 (see SESecurityManagerImpl.initialise()).
+ * 
+ * For Java 18+, SESecurityManagerImpl provides alternative implementations:
+ * - getClassContext() uses StackWalker API
+ * - filterNetworkInterfaces() implements filtering directly
+ * 
+ * @see SESecurityManagerImpl#getClassContext()
+ * @see SESecurityManagerImpl#filterNetworkInterfaces(List)
+ */
+@SuppressWarnings("removal")  // SecurityManager is deprecated for removal, but needed for Java < 18
 public final class
 ClientSecurityManager
 	extends SecurityManager

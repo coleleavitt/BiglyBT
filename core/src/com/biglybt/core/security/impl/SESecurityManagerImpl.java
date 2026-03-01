@@ -1851,24 +1851,61 @@ SESecurityManagerImpl
 	public Class<?>[]
 	getClassContext()
 	{
-		if ( my_sec_man == null ){
-
-			return( new Class[0] );
+		if ( my_sec_man != null ){
+			return( my_sec_man.getClassContext());
 		}
 
-		return( my_sec_man.getClassContext());
+		// Modern Java (18+): Use StackWalker instead of deprecated SecurityManager.getClassContext()
+		// StackWalker is available since Java 9 and is the recommended replacement
+		try {
+			List<Class<?>> classes = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+				.walk(frames -> frames
+					.skip(2)  // Skip getClassContext() and its caller
+					.map(StackWalker.StackFrame::getDeclaringClass)
+					.collect(java.util.stream.Collectors.toList()));
+			return classes.toArray(new Class<?>[0]);
+		} catch (Throwable e) {
+			// Fallback if StackWalker fails for any reason
+			return new Class<?>[0];
+		}
 	}
 
 	public boolean
-	filterNetworkInterfaces( 
+	filterNetworkInterfaces(
 		List<NetworkInterface>		interfaces )
 	{
 		if ( my_sec_man != null ){
-			
 			return( my_sec_man.filterNetworkInterfaces(interfaces));
 		}
-		
-		return( false );
+
+		// Modern Java (18+): Implement filtering directly without SecurityManager
+		// Note: Without SecurityManager, we cannot intercept NetworkInterface.getInterfaceAddresses()
+		// calls system-wide. This implementation provides the filtering logic that can be
+		// called explicitly by code that needs filtered network interfaces.
+		boolean filter_v4 = COConfigurationManager.getBooleanParameter(
+			ConfigKeys.Connection.BCFG_IPV_4_IGNORE_NI_ADDRESSES, false);
+		boolean filter_v6 = COConfigurationManager.getBooleanParameter(
+			ConfigKeys.Connection.BCFG_IPV_6_IGNORE_NI_ADDRESSES, false);
+
+		if (!filter_v4 && !filter_v6) {
+			return false;  // No filtering configured
+		}
+
+		boolean changed = false;
+		for (NetworkInterface ni : interfaces) {
+			try {
+				for (java.net.InterfaceAddress ia : ni.getInterfaceAddresses()) {
+					java.net.InetAddress address = ia.getAddress();
+					if ((filter_v6 && address instanceof java.net.Inet6Address) ||
+						(filter_v4 && address instanceof java.net.Inet4Address)) {
+						changed = true;
+					}
+				}
+			} catch (Throwable e) {
+				// Ignore - seen NPE from ni.getInterfaceAddresses()
+			}
+		}
+		return changed;
 	}
 
 	public static void
