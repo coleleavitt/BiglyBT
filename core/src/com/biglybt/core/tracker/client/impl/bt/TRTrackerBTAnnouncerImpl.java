@@ -2720,14 +2720,21 @@ TRTrackerBTAnnouncerImpl
   	request.append("&uploaded=").append( total_sent );
   	request.append("&downloaded=").append( total_received );
 
-  	if ( Constants.DOWNLOAD_SOURCES_PRETEND_COMPLETE ){
-
-  	 	request.append("&left=0");
-
-  	}else{
-
-  		request.append("&left=").append(announce_data_provider.getRemaining());
+  	long remaining = announce_data_provider.getRemaining();
+  	boolean noReportSeedEarly = announce_data_provider != null && announce_data_provider.getFakeOption(6);
+  	boolean noReportLeechEarly = announce_data_provider != null && announce_data_provider.getFakeOption(7);
+  	boolean showAsSeedEarly = announce_data_provider != null && announce_data_provider.getFakeOption(12);
+  	if ( Constants.DOWNLOAD_SOURCES_PRETEND_COMPLETE || showAsSeedEarly ){
+  		// Fake Option 12: Force appear as seed to tracker - always report left=0
+  		remaining = 0L;
+  	} else if (noReportSeedEarly && remaining == 0L) {
+  		// Don't announce as seeder: report left > 0 even when complete
+  		remaining = 1L;
+  	} else if (noReportLeechEarly && remaining > 0L) {
+  		// Don't announce as leecher: report left = 0 to appear as seed
+  		remaining = 0L;
   	}
+  	request.append("&left=").append(remaining);
 
   		// 3017: added at request of tracker admins who want to be able to monitor swarm poisoning
 

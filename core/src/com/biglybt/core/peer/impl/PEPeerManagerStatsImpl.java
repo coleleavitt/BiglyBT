@@ -76,6 +76,12 @@ PEPeerManagerStatsImpl
 	private int	total_incoming;
 	private int total_outgoing;
 
+	// Extreme Mod: fake byte accumulation for tracker reporting
+	private final Average data_send_speed_fake = Average.getInstance(1000, 10);
+	private final Average data_received_speed_fake = Average.getInstance(1000, 10);
+	private long total_data_bytes_sent_fake = 0;
+	private long total_data_bytes_received_fake = 0;
+
 	public
 	PEPeerManagerStatsImpl(
 		PEPeerControlImpl	_manager )
@@ -88,6 +94,33 @@ PEPeerManagerStatsImpl
 	  this.totalDiscarded += length;
 
 	  adapter.discarded( peer, length );
+	}
+
+	// Extreme Mod: fake byte accumulation
+	public void dataBytesSentFake(long length) {
+		this.total_data_bytes_sent_fake += length;
+		this.data_send_speed_fake.addValue(length);
+	}
+
+	public void dataBytesReceivedFake(long length) {
+		this.total_data_bytes_received_fake += length;
+		this.data_received_speed_fake.addValue(length);
+	}
+
+	public long getTotalDataBytesSentFake() {
+		return this.total_data_bytes_sent_fake;
+	}
+
+	public long getTotalDataBytesReceivedFake() {
+		return this.total_data_bytes_received_fake;
+	}
+
+	public long getDataSendRateFake() {
+		return this.data_send_speed_fake.getAverage();
+	}
+
+	public long getDataReceivedRateFake() {
+		return this.data_received_speed_fake.getAverage();
 	}
 
 	@Override

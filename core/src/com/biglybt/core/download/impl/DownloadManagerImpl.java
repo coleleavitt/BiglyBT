@@ -755,6 +755,24 @@ DownloadManagerImpl
 
 	private AtomicLong tagMutationCounter = new AtomicLong();
 
+	// Extreme Mod: fake option flag arrays
+	// tabBool indices:
+	//   0=FakeOffFakeAddedToReal, 1=EnableFake, 2=DownloadReduc, 3=DownloadReducAlone, 4=DownloadReducMix,
+	//   5=NoReport, 6=NoReportSeed, 7=NoReportLeech, 8=FakeUploadRM, 9=FakeUploadRMContinue,
+	//   10=FakeUploadSpeedRatio, 11=FakeUploadMultiplier, 12=ShowAsSeed, 13-15=reserved,
+	//   16=FakeUploadIsRatio, 17=FakeUploadAdd, 18=FakeUploadRMIntelligent, 19=FakeSwarmSpeed,
+	//   20=SafeFakeUpload, 21=FakeUploadSRIntelligent, 22=StartFake, 23=NoReportCustom, 24=NoReportAuto,
+	//   25=GhostLeech, 26=GhostLeechStart, 27=GhostLeechStartStop, 28=GhostLeechStopTime,
+	//   29=GhostLeechNoReport, 30=FakeStopIfSwarmDrops, 31=RatioTool, 32=RatioToolActive,
+	//   33=RatioToolUpload, 34=RatioToolDownload, 35=RatioToolStopUpload, 36=RatioToolStopDownload,
+	//   37=RatioToolStopPeers, 38=RatioToolFakeIntelligent, 39=RatioToolStartSlow, 40=RatioToolAddStopped,
+	//   41-42=reserved runtime flags
+	private boolean[]	tabBool				= new boolean[43];
+	private int[]		tabInt				= new int[5];
+	private String[]	tabString			= new String[1];
+	private float[]		tabFloat			= new float[23];
+	private boolean[]	tabGeneralOption	= new boolean[12];
+
 	// Only call this with STATE_QUEUED, STATE_WAITING, or STATE_STOPPED unless you know what you are doing
 
     private volatile boolean	removing;
@@ -7995,18 +8013,223 @@ DownloadManagerImpl
 		globalManager.fireGlobalManagerEvent( eventType, this, eventData );
 	}
 
-	@Override
-	public boolean
-	getFakeOption(int optionNumber)
-	{
-		return COConfigurationManager.getBooleanParameter("fake.option." + optionNumber, false);
+	// ===================== Extreme Mod: Fake Option Flags System =====================
+
+	public static float unEntierAuHasardEntre(float min, float max) {
+		double nombreReel = Math.random();
+		float resultat = (float)(nombreReel * (double)(max - min) + (double)min);
+		return resultat;
+	}
+
+	// --- tabBool: boolean fake option flags ---
+
+	public boolean[] readParamsFakeOption() {
+		tabBool[0]  = getDownloadState().getBooleanParameter("FakeOff FakeAddedToReal");
+		tabBool[1]  = getDownloadState().getBooleanParameter("Enable Fake");
+		tabBool[2]  = getDownloadState().getBooleanParameter("Download Reduc");
+		tabBool[3]  = getDownloadState().getBooleanParameter("Download ReducAlone");
+		tabBool[4]  = getDownloadState().getBooleanParameter("Download ReducMix");
+		tabBool[5]  = getDownloadState().getBooleanParameter("No Report");
+		tabBool[6]  = getDownloadState().getBooleanParameter("No ReportSeed");
+		tabBool[7]  = getDownloadState().getBooleanParameter("No ReportLeech");
+		tabBool[8]  = getDownloadState().getBooleanParameter("Fake UploadRM");
+		tabBool[9]  = getDownloadState().getBooleanParameter("Fake UploadRMContinue");
+		tabBool[10] = getDownloadState().getBooleanParameter("Fake UploadSpeedRatio");
+		tabBool[11] = getDownloadState().getBooleanParameter("Fake UploadMultiplier");
+		tabBool[12] = getDownloadState().getBooleanParameter("Show As Seed");
+		tabBool[13] = false;
+		tabBool[14] = false;
+		tabBool[15] = false;
+		tabBool[16] = getDownloadState().getBooleanParameter("Fake UploadIsRatio");
+		tabBool[17] = getDownloadState().getBooleanParameter("Fake UploadAdd");
+		tabBool[18] = getDownloadState().getBooleanParameter("Fake UploadRMIntelligent");
+		tabBool[19] = getDownloadState().getBooleanParameter("Fake SwarmSpeed");
+		tabBool[20] = getDownloadState().getBooleanParameter("Safe FakeUpload");
+		tabBool[21] = getDownloadState().getBooleanParameter("Fake UploadSRIntelligent");
+		tabBool[22] = getDownloadState().getBooleanParameter("Start Fake");
+		tabBool[23] = getDownloadState().getBooleanParameter("No ReportCustom");
+		tabBool[24] = getDownloadState().getBooleanParameter("No ReportAuto");
+		tabBool[25] = getDownloadState().getBooleanParameter("GhostLeech");
+		tabBool[26] = getDownloadState().getBooleanParameter("GhostLeechStart");
+		tabBool[27] = getDownloadState().getBooleanParameter("GhostLeechStartStop");
+		tabBool[28] = getDownloadState().getBooleanParameter("GhostLeechStopTime");
+		tabBool[29] = getDownloadState().getBooleanParameter("GhostLeechNoReport");
+		tabBool[30] = getDownloadState().getBooleanParameter("Fake StopIfSwarmDrops");
+		tabBool[31] = getDownloadState().getBooleanParameter("RatioTool");
+		tabBool[32] = getDownloadState().getBooleanParameter("RatioToolActive");
+		tabBool[33] = getDownloadState().getBooleanParameter("RatioToolUpload");
+		tabBool[34] = getDownloadState().getBooleanParameter("RatioToolDownload");
+		tabBool[35] = getDownloadState().getBooleanParameter("RatioToolStopUpload");
+		tabBool[36] = getDownloadState().getBooleanParameter("RatioToolStopDownload");
+		tabBool[37] = getDownloadState().getBooleanParameter("RatioToolStopPeers");
+		tabBool[38] = getDownloadState().getBooleanParameter("RatioToolFakeIntelligent");
+		tabBool[39] = getDownloadState().getBooleanParameter("RatioToolStartSlow");
+		tabBool[40] = getDownloadState().getBooleanParameter("RatioToolAddStopped");
+		tabBool[41] = false;
+		tabBool[42] = false;
+		return tabBool;
+	}
+
+	public void setFakeOption(boolean[] tabOption) {
+		this.tabBool = tabOption;
+	}
+
+	public void setFakeOption(boolean option, int i) {
+		this.tabBool[i] = option;
 	}
 
 	@Override
-	public boolean
-	getGeneralOption(int optionNumber)
-	{
-		return COConfigurationManager.getBooleanParameter("general.option." + optionNumber, false);
+	public boolean[] getFakeOption() {
+		return this.tabBool;
+	}
+
+	@Override
+	public boolean getFakeOption(int i) {
+		return this.tabBool[i];
+	}
+
+	// --- tabInt: integer fake option values ---
+
+	public int[] readParamsFakeIntValue() {
+		tabInt[0] = getDownloadState().getIntParameter("DownloadReduc Value");
+		tabInt[1] = getDownloadState().getIntParameter("Peer Fake");
+		tabInt[2] = getDownloadState().getIntParameter("PeerSeed Ratio");
+		tabInt[3] = getDownloadState().getIntParameter("GhostLeechStopTimeValue");
+		tabInt[4] = getDownloadState().getIntParameter("RatioToolStopPeersValue");
+		return tabInt;
+	}
+
+	public void setFakeIntValue(int[] tabValue) {
+		this.tabInt = tabValue;
+	}
+
+	@Override
+	public void setFakeIntValue(int value, int i) {
+		this.tabInt[i] = value;
+	}
+
+	@Override
+	public int[] getFakeIntValue() {
+		return this.tabInt;
+	}
+
+	@Override
+	public int getFakeIntValue(int i) {
+		return this.tabInt[i];
+	}
+
+	// --- tabString: string fake option values ---
+
+	public String[] readParamsFakeStringValue() {
+		tabString[0] = "";
+		return tabString;
+	}
+
+	public void setFakeStringValue(String[] tabValue) {
+		this.tabString = tabValue;
+	}
+
+	public void setFakeStringValue(String value, int i) {
+		this.tabString[i] = value;
+	}
+
+	public String[] getFakeStringValue() {
+		return this.tabString;
+	}
+
+	public String getFakeStringValue(int i) {
+		return this.tabString[i];
+	}
+
+	// --- tabFloat: float fake option values (multipliers, ratios, durations) ---
+
+	public float[] readParamsFakeFloatValue() {
+		tabFloat[0]  = (float)getDownloadState().getLongParameter("FakeUploadRM Value") / 1000.0F;
+		tabFloat[1]  = (float)getDownloadState().getLongParameter("FakeUploadRM ValueMax") / 1000.0F;
+		tabFloat[2]  = (float)getDownloadState().getLongParameter("FakeUploadSpeedRatio RValue") / 1000.0F;
+		tabFloat[3]  = (float)getDownloadState().getLongParameter("FakeUploadSpeedRatio RValueMax") / 1000.0F;
+		tabFloat[4]  = (float)getDownloadState().getLongParameter("FakeUploadSpeedRatio SValue") / 1000.0F;
+		tabFloat[5]  = (float)getDownloadState().getLongParameter("FakeUploadSpeedRatio SValueMax") / 1000.0F;
+		tabFloat[6]  = (float)getDownloadState().getLongParameter("FakeUploadMultiplier Value") / 1000.0F;
+		tabFloat[7]  = (float)getDownloadState().getLongParameter("FakeUploadMultiplier ValueMax") / 1000.0F;
+		tabFloat[8]  = (float)getDownloadState().getLongParameter("Safe Fake UploadValue") / 1000.0F;
+		tabFloat[9]  = (float)getDownloadState().getLongParameter("Start Fake PourcentValue") / 1000.0F;
+		tabFloat[10] = (float)getDownloadState().getLongParameter("Stop After X Hours Value") / 1000.0F;
+		tabFloat[11] = (float)getDownloadState().getLongParameter("FakeUploadSpeedRatio SValue RatioReached") / 1000.0F;
+		tabFloat[12] = (float)getDownloadState().getLongParameter("FakeUploadSpeedRatio SValueMax RatioReached") / 1000.0F;
+		tabFloat[22] = (float)getDownloadState().getLongParameter("Keep Torrent X Hours Value") / 1000.0F;
+		tabFloat[13] = (float)getDownloadState().getLongParameter("No ReportCustomValue") / 1000.0F;
+		tabFloat[14] = (float)getDownloadState().getLongParameter("RatioToolUploadSpeedMin") / 1000.0F;
+		tabFloat[15] = (float)getDownloadState().getLongParameter("RatioToolUploadSpeedMax") / 1000.0F;
+		tabFloat[16] = (float)getDownloadState().getLongParameter("RatioToolDownloadSpeedMin") / 1000.0F;
+		tabFloat[17] = (float)getDownloadState().getLongParameter("RatioToolDownloadSpeedMax") / 1000.0F;
+		tabFloat[18] = (float)getDownloadState().getLongParameter("RatioToolPercentDone") / 1000.0F;
+		tabFloat[19] = (float)getDownloadState().getLongParameter("RatioToolStopUploadValue") / 1000.0F;
+		tabFloat[20] = (float)getDownloadState().getLongParameter("RatioToolStopDownloadValue") / 1000.0F;
+		tabFloat[21] = (float)getDownloadState().getLongParameter("RatioToolStartSlowValue") / 1000.0F;
+		return tabFloat;
+	}
+
+	public void setFakeFloatValue(float[] tabValue) {
+		this.tabFloat = tabValue;
+	}
+
+	public void setFakeFloatValue(float value, int i) {
+		this.tabFloat[i] = value;
+	}
+
+	public float[] getFakeFloatValueArray() {
+		return this.tabFloat;
+	}
+
+	@Override
+	public float[] getFakeFloatValue() {
+		return this.tabFloat;
+	}
+
+	@Override
+	public float getFakeFloatValue(int i) {
+		return this.tabFloat[i];
+	}
+
+	// --- tabGeneralOption: general per-torrent option flags ---
+
+	public boolean[] readParamsGeneralOption() {
+		tabGeneralOption[0]  = getDownloadState().getBooleanParameter("ctadl");
+		tabGeneralOption[1]  = getDownloadState().getBooleanParameter("ctadlremove");
+		tabGeneralOption[2]  = getDownloadState().getBooleanParameter("ctadlremovetorrent");
+		tabGeneralOption[3]  = getDownloadState().getBooleanParameter("No Upload");
+		tabGeneralOption[4]  = getDownloadState().getBooleanParameter("dontsendcompletedflag");
+		tabGeneralOption[5]  = getDownloadState().getBooleanParameter("Stoping");
+		tabGeneralOption[6]  = getDownloadState().getBooleanParameter("ShuLogging");
+		tabGeneralOption[7]  = getDownloadState().getBooleanParameter("Peer No Have");
+		tabGeneralOption[8]  = getDownloadState().getBooleanParameter("stopafterxhours");
+		tabGeneralOption[9]  = getDownloadState().getBooleanParameter("Disable No Upload 4 Lan");
+		tabGeneralOption[10] = getDownloadState().getBooleanParameter("SwarmPeerPool");
+		tabGeneralOption[11] = getDownloadState().getBooleanParameter("keeptorrentxhours");
+		return tabGeneralOption;
+	}
+
+	public void setGeneralOption(boolean[] tabValue) {
+		this.tabGeneralOption = tabValue;
+	}
+
+	public void setGeneralOption(boolean value, int i) {
+		this.tabGeneralOption[i] = value;
+	}
+
+	public boolean[] getGeneralOptionArray() {
+		return this.tabGeneralOption;
+	}
+
+	@Override
+	public boolean[] getGeneralOption() {
+		return this.tabGeneralOption;
+	}
+
+	@Override
+	public boolean getGeneralOption(int i) {
+		return this.tabGeneralOption[i];
 	}
 
 	// Upload Kicker support for spoofing
@@ -8032,12 +8255,4 @@ DownloadManagerImpl
 	{
 		// Trigger stats refresh if needed
 	}
-
-	@Override
-	public float
-	getFakeFloatValue(int optionNumber)
-	{
-		return COConfigurationManager.getFloatParameter("fake.float." + optionNumber, 1.0F);
-	}
-
 }

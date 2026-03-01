@@ -325,6 +325,7 @@ public class TableColumnCreator
 		c.put(DownFakeItem.COLUMN_ID, new cInfo(DownFakeItem.class, DownFakeItem.DATASOURCE_TYPE));
 		c.put(UpFakeItem.COLUMN_ID, new cInfo(UpFakeItem.class, UpFakeItem.DATASOURCE_TYPE));
 		c.put(RatioFakeItem.COLUMN_ID, new cInfo(RatioFakeItem.class, RatioFakeItem.DATASOURCE_TYPE));
+		c.put(ShareRatioFakeItem.COLUMN_ID, new cInfo(ShareRatioFakeItem.class, ShareRatioFakeItem.DATASOURCE_TYPE));
 
 		c.put(	PrivateItem.COLUMN_ID, 
 				new cInfo(

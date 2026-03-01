@@ -1646,6 +1646,8 @@ public class GlobalManagerImpl
 			   long saved_hashfails				= 0;
 			   long saved_SecondsDownloading		= 0;
 			   long saved_SecondsOnlySeeding 		= 0;
+			   long saved_data_bytes_downloaded_fake	= 0;
+			   long saved_data_bytes_uploaded_fake	= 0;
 
 			   if ( save_download_state != null ){
 
@@ -1654,6 +1656,8 @@ public class GlobalManagerImpl
 
 				   Long lDownloaded = (Long) save_download_state.get("downloaded");
 				   Long lUploaded = (Long) save_download_state.get("uploaded");
+				   Long lDownloaded_fake = (Long) save_download_state.get("downloaded_fake");
+				   Long lUploaded_fake = (Long) save_download_state.get("uploaded_fake");
 				   Long lCompletedBytes = (Long) save_download_state.get("completedbytes");
 				   Long lDiscarded = (Long) save_download_state.get("discarded");
 				   Long lHashFailsCount = (Long) save_download_state.get("hashfails");	// old method, number of fails
@@ -1746,6 +1750,11 @@ public class GlobalManagerImpl
 					   saved_data_bytes_uploaded		= lUploadedValue;
 				   }
 
+				   if (lDownloaded_fake != null && lUploaded_fake != null) {
+					   saved_data_bytes_downloaded_fake = lDownloaded_fake.longValue();
+					   saved_data_bytes_uploaded_fake = lUploaded_fake.longValue();
+				   }
+
 				   if (lPosition != null)
 					   download_manager.setPosition(lPosition.intValue());
 				   // no longer needed code
@@ -1794,6 +1803,8 @@ public class GlobalManagerImpl
 			   dm_stats.restoreSessionTotals(
 					   saved_data_bytes_downloaded,
 					   saved_data_bytes_uploaded,
+					   saved_data_bytes_downloaded_fake,
+					   saved_data_bytes_uploaded_fake,
 					   saved_discarded,
 					   saved_hashfails,
 					   saved_SecondsDownloading,
@@ -3489,6 +3500,8 @@ public class GlobalManagerImpl
 	  
 	  dmMap.put("downloaded", new Long(dm_stats.getTotalDataBytesReceived()));
 	  dmMap.put("uploaded", new Long(dm_stats.getTotalDataBytesSent()));
+	  dmMap.put("downloaded_fake", new Long(dm_stats.getTotalDataBytesReceivedFake()));
+	  dmMap.put("uploaded_fake", new Long(dm_stats.getTotalDataBytesSentFake()));
 	  dmMap.put("completedbytes", new Long(dm_stats.getDownloadCompletedBytes()));
 	  dmMap.put("discarded", new Long(dm_stats.getDiscarded()));
 	  dmMap.put("hashfailbytes", new Long(dm_stats.getHashFailBytes()));

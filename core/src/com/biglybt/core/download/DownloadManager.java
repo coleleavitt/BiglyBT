@@ -940,12 +940,35 @@ DownloadManager
 
 	public void
 	requestAttention();
-	boolean getFakeOption(int optionNumber);
+	// ---- Fake/Spoof Option Methods ----
+	// Index constants for fake options:
+	//   0 = Fake upload speed enabled
+	//   1 = Fake download speed enabled
+	//   2 = Fake seeds/peers enabled
+	//   3 = Fake completion enabled
+	//   4 = Upload kicker enabled
+
+	// Index constants for fake int/float values:
+	//   0 = Fake upload speed multiplier
+	//   1 = Fake download speed multiplier
+	//   2 = Fake seeds count
+	//   3 = Fake peers count
+	//   4 = Upload kicker value
+
+	boolean getFakeOption(int index);
+	void setFakeOption(boolean value, int index);
+	boolean[] getFakeOption();
 	boolean getGeneralOption(int optionNumber);
+	boolean[] getGeneralOption();
+
+	int[] getFakeIntValue();
+	int getFakeIntValue(int index);
+	void setFakeIntValue(int value, int index);
+	float[] getFakeFloatValue();
+	float getFakeFloatValue(int index);
 
 	// Upload Kicker support for spoofing
 	float getUploadKickerValue();
 	void setUploadKickerValue(float value);
 	void refreshUploadKickerValue();
-	float getFakeFloatValue(int optionNumber);
 }

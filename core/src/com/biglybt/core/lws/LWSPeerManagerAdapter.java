@@ -487,6 +487,11 @@ LWSPeerManagerAdapter
 	}
 
 	@Override
+	public com.biglybt.core.download.DownloadManager getDownload_manager(){
+		return null; // LWS doesn't have a download manager
+	}
+
+	@Override
 	public void 
 	saveTorrentState()
 	{

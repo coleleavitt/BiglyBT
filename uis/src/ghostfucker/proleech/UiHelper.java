@@ -6,6 +6,7 @@ import com.biglybt.ui.swt.config.IntSwtParameter;
 import com.biglybt.ui.swt.config.StringSwtParameter;
 import com.biglybt.ui.swt.config.SwtParameterValueProcessor;
 import com.biglybt.ui.swt.imageloader.ImageLoader;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.graphics.Image;
@@ -26,7 +27,7 @@ import org.eclipse.swt.widgets.MenuItem;
 public class UiHelper {
 
 	public static Control addToConfigSection(final Composite composite, Control control) {
-		Group group = new Group(composite, 0);
+		Group group = new Group(composite, SWT.NONE);
 		group.setText("ProLeech");
 		FormLayout formLayout = new FormLayout();
 		formLayout.marginBottom = 6;
@@ -34,100 +35,86 @@ public class UiHelper {
 		formLayout.marginLeft = 6;
 		formLayout.marginTop = 9;
 		group.setLayout(formLayout);
-
 		FormData formData = new FormData();
 		formData.top = new FormAttachment(control, 3);
 		group.setLayoutData(formData);
 
-		// Export directory label
-		Label label = new Label(group, 0);
+		Label label = new Label(group, SWT.NONE);
 		label.setText("Export directory:");
 		formData = new FormData();
 		formData.top = new FormAttachment(control, 2);
 		label.setLayoutData(formData);
 
-		// Export directory text field
-		final StringSwtParameter stringParam = new StringSwtParameter(
-				group, "plSaveDir", null, null, (SwtParameterValueProcessor) null);
+		final StringSwtParameter stringParameter = new StringSwtParameter(group, "plSaveDir", null, null, (SwtParameterValueProcessor) null);
 		formData = new FormData();
 		formData.top = new FormAttachment(control);
 		formData.left = new FormAttachment(label, 4);
 		formData.width = 290;
-		stringParam.setLayoutData(formData);
+		stringParameter.setLayoutData(formData);
 
-		// Browse button
 		ImageLoader imageLoader = ImageLoader.getInstance();
 		Image image = imageLoader.getImage("openFolderButton");
-		Button button = new Button(group, 8);
+		Button button = new Button(group, SWT.PUSH);
 		button.setImage(image);
 		image.setBackground(button.getBackground());
 		formData = new FormData();
 		formData.top = new FormAttachment(control, -2);
-		formData.left = new FormAttachment(stringParam.getMainControl());
+		formData.left = new FormAttachment(stringParameter.getMainControl());
 		button.setLayoutData(formData);
-		button.addListener(13, new Listener() {
+		button.addListener(SWT.Selection, new Listener() {
 			public void handleEvent(Event event) {
-				DirectoryDialog dialog = new DirectoryDialog(composite.getShell(), 65536);
-				dialog.setFilterPath((String) stringParam.getValue());
-				dialog.setText("Save directory:");
-				dialog.setMessage("Please choose the ProLeech torrent save directory");
-				String path = dialog.open();
-				if (path != null) {
-					stringParam.setValue(path);
+				DirectoryDialog directoryDialog = new DirectoryDialog(composite.getShell(), SWT.SHEET);
+				directoryDialog.setFilterPath((String) stringParameter.getValue());
+				directoryDialog.setText("Save directory:");
+				directoryDialog.setMessage("Please choose the ProLeech torrent save directory");
+				String string = directoryDialog.open();
+				if (string != null) {
+					stringParameter.setValue(string);
 				}
 			}
 		});
 
-		// Auto-export checkbox
-		BooleanSwtParameter autoCapParam = new BooleanSwtParameter(
-				group, "plAutoCap", null, null, (SwtParameterValueProcessor) null);
-		((Button) autoCapParam.getMainControl()).setText("Automatic export on torrent-startup");
+		BooleanSwtParameter booleanParameter = new BooleanSwtParameter(group, "plAutoCap", null, null, null);
+		((Button) booleanParameter.getMainControl()).setText("Automatic export on torrent-startup");
 		formData = new FormData();
 		formData.top = new FormAttachment(button, 10);
-		autoCapParam.setLayoutData(formData);
+		booleanParameter.setLayoutData(formData);
 
-		// Min peers checkbox
-		BooleanSwtParameter peersCntParam = new BooleanSwtParameter(
-				group, "plAutoCapPeersCnt", null, null, (SwtParameterValueProcessor) null);
-		((Button) peersCntParam.getMainControl()).setText("Export torrents with at least X peers.   X =");
+		BooleanSwtParameter booleanParameter2 = new BooleanSwtParameter(group, "plAutoCapPeersCnt", null, null, null);
+		((Button) booleanParameter2.getMainControl()).setText("Export torrents with at least X peers.   X =");
 		formData = new FormData();
-		formData.top = new FormAttachment(autoCapParam.getMainControl(), 2);
-		peersCntParam.setLayoutData(formData);
+		formData.top = new FormAttachment(booleanParameter.getMainControl(), 2);
+		booleanParameter2.setLayoutData(formData);
 
-		// Min peers value
-		IntSwtParameter peersCntValParam = new IntSwtParameter(
-				group, "plAutoCapPeersCntVal", null, null, 5, 200, (SwtParameterValueProcessor) null);
+		IntSwtParameter intParameter = new IntSwtParameter(group, "plAutoCapPeersCntVal", null, null, 5, 200, null);
 		formData = new FormData();
-		formData.top = new FormAttachment(autoCapParam.getMainControl(), -1);
-		formData.left = new FormAttachment(peersCntParam.getMainControl());
-		peersCntValParam.setLayoutData(formData);
+		formData.top = new FormAttachment(booleanParameter.getMainControl(), -1);
+		formData.left = new FormAttachment(booleanParameter2.getMainControl());
+		intParameter.setLayoutData(formData);
 
-		// Override existing torrents checkbox
-		BooleanSwtParameter overrideParam = new BooleanSwtParameter(
-				group, "plOverrideTorrent", null, null, (SwtParameterValueProcessor) null);
-		((Button) overrideParam.getMainControl()).setText("Replace existing torrents");
+		BooleanSwtParameter booleanParameter3 = new BooleanSwtParameter(group, "plOverrideTorrent", null, null, null);
+		((Button) booleanParameter3.getMainControl()).setText("Replace existing torrents");
 		formData = new FormData();
-		formData.top = new FormAttachment(peersCntParam.getMainControl(), 2);
-		overrideParam.setLayoutData(formData);
+		formData.top = new FormAttachment(booleanParameter2.getMainControl(), 2);
+		booleanParameter3.setLayoutData(formData);
 
 		return group;
 	}
 
-	public static void addToMenu(Menu menu, final DownloadManager[] dms, boolean enabled) {
+	public static void addToMenu(Menu menu, final DownloadManager[] arrdownloadManager, boolean bl) {
 		final Image image = new Image(menu.getDisplay(), UiHelper.class.getResourceAsStream("img.png"));
-
-		new MenuItem(menu, 2); // Separator
-		MenuItem menuItem = new MenuItem(menu, 8);
+		new MenuItem(menu, SWT.SEPARATOR);
+		MenuItem menuItem = new MenuItem(menu, SWT.PUSH);
 		menuItem.setText("Export ProLeech torrent(s)");
 		menuItem.setImage(image);
-		menuItem.addListener(13, new Listener() {
+		menuItem.addListener(SWT.Selection, new Listener() {
 			public void handleEvent(Event event) {
-				TorrentHelper.exportTorrents(dms);
+				TorrentHelper.exportTorrents(arrdownloadManager);
 			}
 		});
-		menuItem.setEnabled(enabled);
+		menuItem.setEnabled(bl);
 		menuItem.addDisposeListener(new DisposeListener() {
-			public void widgetDisposed(DisposeEvent e) {
+			public void widgetDisposed(DisposeEvent disposeEvent) {
 				if (image != null && !image.isDisposed()) {
 					image.dispose();
 				}

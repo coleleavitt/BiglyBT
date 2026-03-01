@@ -416,6 +416,9 @@ DownloadManagerController
 
 		download_manager.informWillBeStarted( temp );
 
+		final boolean noReport = download_manager.getFakeOption(5);
+		final boolean ghostLeech = download_manager.getFakeOption(25);
+
 		if (Logger.isEnabled()){
 			
 			Logger.log(
@@ -452,92 +455,133 @@ DownloadManagerController
 	    			@Override
 	    		    public long
 	    			getTotalSent()
-	    			{
-	    				float uploadKickerUpload = download_manager.getUploadKickerValue();
-	    				if ( uploadKickerUpload != 0.0F ){
-	    					uploadKickerUpload *= 1048576.0F;
-	    					download_manager.setUploadKickerValue( 0.0F );
-	    					download_manager.refreshUploadKickerValue();
-	    				}
+	    		{
+	    			// Ghost leech mode: report zero stats to tracker to appear invisible
+	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("Ghost Leech Mode", false);
+	    			if (ghostLeech || ghostLeechGlobal) {
+	    				return 0L;
+	    			}
 
-	    				boolean enableFake = download_manager.getFakeOption(1);
-	    				boolean FakeOffFakeAddedToReal = download_manager.getFakeOption(0);
-	    				boolean ratioTool = download_manager.getFakeOption(31);
-	    				if ( enableFake ){
-	    					boolean safeFakeUpload = download_manager.getFakeOption(20);
-	    					if ( safeFakeUpload ){
-	    						long sentFake = temp.getSentFake();
-	    						long fileSize = temp.getDiskManager().getTotalLength();
-	    						float multiCoef = download_manager.getFakeFloatValue(8);
-	    						if ( (float)sentFake > (float)fileSize * multiCoef ){
-	    							return( (long)((float)fileSize * multiCoef) + (long)uploadKickerUpload );
-	    						}
-	    					}
-	    					return( temp.getSentFake() + (long)uploadKickerUpload );
-	    				}else{
-	    					return( (!FakeOffFakeAddedToReal || enableFake) && !ratioTool ? (tracker_stats_exclude_lan?pm_stats.getTotalDataBytesSentNoLan():pm_stats.getTotalDataBytesSent()) + (long)uploadKickerUpload : temp.getSentFake() + (long)uploadKickerUpload );
+	    			float uploadKickerUpload = download_manager.getUploadKickerValue();
+	    			if ( uploadKickerUpload != 0.0F ){
+	    				uploadKickerUpload *= 1048576.0F;
+	    				download_manager.setUploadKickerValue( 0.0F );
+	    				download_manager.refreshUploadKickerValue();
+	    				if (noReport || ghostLeech) {
+	    					uploadKickerUpload = 0.0F;
 	    				}
 	    			}
+
+	    			// Upload kicker multiplier - multiplies real upload bytes
+	    			boolean kickerEnabled = COConfigurationManager.getBooleanParameter("fake.upload.kicker.enabled", false);
+	    			float kickerMultiplier = COConfigurationManager.getFloatParameter("fake.upload.kicker.multiplier", 1.0F);
+	    			long kickerExtra = 0L;
+	    			if (kickerEnabled && kickerMultiplier > 1.0F) {
+	    				long realSent = tracker_stats_exclude_lan ? pm_stats.getTotalDataBytesSentNoLan() : pm_stats.getTotalDataBytesSent();
+	    				kickerExtra = (long)(realSent * (kickerMultiplier - 1.0F));
+	    			}
+
+	    			boolean enableFake = download_manager.getFakeOption(1);
+	    			boolean FakeOffFakeAddedToReal = download_manager.getFakeOption(0);
+	    			boolean ratioTool = download_manager.getFakeOption(31);
+	    			if ( enableFake ){
+	    				boolean safeFakeUpload = download_manager.getFakeOption(20);
+	    				if ( safeFakeUpload ){
+	    					long sentFake = temp.getSentFake();
+	    					long fileSize = temp.getDiskManager().getTotalLength();
+	    					float multiCoef = download_manager.getFakeFloatValue(8);
+	    					if ( (float)sentFake > (float)fileSize * multiCoef ){
+	    						return( (long)((float)fileSize * multiCoef) + (long)uploadKickerUpload + kickerExtra );
+	    					}
+	    				}
+	    				return( temp.getSentFake() + (long)uploadKickerUpload + kickerExtra );
+	    			}else{
+	    				return( (!FakeOffFakeAddedToReal || enableFake) && !ratioTool ? (tracker_stats_exclude_lan?pm_stats.getTotalDataBytesSentNoLan():pm_stats.getTotalDataBytesSent()) + (long)uploadKickerUpload + kickerExtra : temp.getSentFake() + (long)uploadKickerUpload + kickerExtra );
+	    			}
+	    		}
 
 	    			@Override
 	    		    public long
 	    			getTotalReceived()
-	    			{
-	    				boolean enableFake = download_manager.getFakeOption(1);
-	    				boolean ratioTool = download_manager.getFakeOption(31);
-	    				if ( !enableFake && !ratioTool ){
-	    					long received 	= tracker_stats_exclude_lan?pm_stats.getTotalDataBytesReceivedNoLan():pm_stats.getTotalDataBytesReceived();
-	    					long discarded 	= pm_stats.getTotalDiscarded();
-	    					long failed		= pm_stats.getTotalHashFailBytes();
+	    		{
+	    			// Ghost leech mode: report zero received to tracker
+	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("Ghost Leech Mode", false);
+	    			if (ghostLeech || ghostLeechGlobal) {
+	    				return 0L;
+	    			}
 
-	    					long verified = received - ( discarded + failed );
+	    			boolean enableFake = download_manager.getFakeOption(1);
+	    			boolean ratioTool = download_manager.getFakeOption(31);
+	    			long result;
+	    			if ( !enableFake && !ratioTool ){
+	    				long received 	= tracker_stats_exclude_lan?pm_stats.getTotalDataBytesReceivedNoLan():pm_stats.getTotalDataBytesReceived();
+	    				long discarded 	= pm_stats.getTotalDiscarded();
+	    				long failed		= pm_stats.getTotalHashFailBytes();
 
-	    					verified -= temp.getHiddenBytes();
+	    				long verified = received - ( discarded + failed );
 
-	    						// ensure we don't go backwards. due to lack of atomicity of updates and possible
-	    						// miscounting somewhere we have seen this occur
+	    				verified -= temp.getHiddenBytes();
 
-	    					if ( verified < last_reported_total_received ){
+	    					// ensure we don't go backwards. due to lack of atomicity of updates and possible
+	    					// miscounting somewhere we have seen this occur
 
-	    						verified = last_reported_total_received;
+	    				if ( verified < last_reported_total_received ){
 
-	    							// use -1 as indicator that we've reported this event
+	    					verified = last_reported_total_received;
 
-	    						if ( last_reported_total_received_data != -1 ){
+	    						// use -1 as indicator that we've reported this event
 
-	    							/*
-	    							Debug.out(
-	    									getDisplayName() + ": decrease in overall downloaded - " +
-	    									"data=" + received + "/" + last_reported_total_received_data +
-	    									",discard=" + discarded + "/" + last_reported_total_received_discard +
-	    									",fail=" + failed + "/" + last_reported_total_received_failed );
-	    							*/
+	    					if ( last_reported_total_received_data != -1 ){
 
-	    							last_reported_total_received_data = -1;
-	    						}
-	    					}else{
+	    						/*
+	    						Debug.out(
+	    								getDisplayName() + ": decrease in overall downloaded - " +
+	    								"data=" + received + "/" + last_reported_total_received_data +
+	    								",discard=" + discarded + "/" + last_reported_total_received_discard +
+	    								",fail=" + failed + "/" + last_reported_total_received_failed );
+	    						*/
 
-	    						last_reported_total_received = verified;
-
-	    						last_reported_total_received_data		= received;
-	    						last_reported_total_received_discard	= discarded;
-	    						last_reported_total_received_failed		= failed;
+	    						last_reported_total_received_data = -1;
 	    					}
-
-	    					return( verified < 0?0:verified );
 	    				}else{
-	    					return( temp.getReceivedFake() );
+
+	    					last_reported_total_received = verified;
+
+	    					last_reported_total_received_data		= received;
+	    					last_reported_total_received_discard	= discarded;
+	    					last_reported_total_received_failed	= failed;
+	    				}
+
+	    				result = verified < 0 ? 0 : verified;
+	    			}else{
+	    				result = temp.getReceivedFake();
+	    			}
+
+	    			// Fake Option 2: Download reduction - reduce reported downloaded bytes by percentage
+	    			boolean downloadReduc = download_manager.getFakeOption(2);
+	    			if (downloadReduc) {
+	    				int reductionPercent = COConfigurationManager.getIntParameter("fake.download.reduction.percent", 0);
+	    				if (reductionPercent > 0 && reductionPercent <= 100) {
+	    					result = result * (100 - reductionPercent) / 100;
 	    				}
 	    			}
+
+	    			return result;
+	    		}
 
 	    			@Override
 	    		    public long
 	    			getRemaining()
-	    			{
-	    				boolean enableFake = download_manager.getFakeOption(1);
-	    				boolean ratioTool = download_manager.getFakeOption(31);
-	    				return( !enableFake && !ratioTool ? Math.max( temp.getRemaining(), temp.getHiddenBytes()) : temp.getRemainingFake() );
+	    		{
+	    			boolean enableFake = download_manager.getFakeOption(1);
+	    			boolean ratioTool = download_manager.getFakeOption(31);
+	    			// Ghost leech mode: report full file size as remaining (appear as if not downloading)
+	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("Ghost Leech Mode", false);
+	    			if (ghostLeech || ghostLeechGlobal) {
+	    				return temp.getDiskManager().getTotalLength();
 	    			}
+	    			return( !enableFake && !ratioTool ? Math.max( temp.getRemaining(), temp.getHiddenBytes()) : temp.getRemainingFake() );
+	    		}
 
 	    			@Override
 				    public long
@@ -1555,6 +1599,12 @@ DownloadManagerController
 		}
 
 		fileFacadeSet.destroyFileInfo();
+	}
+
+	// Extreme Mod: expose download manager for fake byte generation
+	@Override
+	public com.biglybt.core.download.DownloadManager getDownload_manager(){
+		return download_manager;
 	}
 
 	@Override

@@ -16,29 +16,49 @@ public class ShuUI {
 	public static String authStatut = "admin";
 	public static String news = "";
 	public static int numtry = 0;
+
 	public static final String SHUVERSION = Constants.BIGLYBT_VERSION + "_DDJ";
 
-	public static final String[] splashs = new String[]{
-			"Original Vuze Splash", "Dark Blue DDJ Hack by Manas",
-			"\"S2 Mod\" by zoplex", "\"The X Style\" by zoplex",
-			"\"Full red stylish\" by cubieuk", "\"Full red strange\"by unreal666",
-			"\"Blue stylish\" by masterchief", "\"Blue frog\" by masterchief",
-			"\"Green frog\" by masterchief", "\"Brown frog\" by masterchief",
-			"\"Celtic Frog 1\" by Javed", "\"Celtic Frog 2\" by Javed",
-			"\"Hardcore Style\" by Javed", "\"Dark orange frog\" by zoplex",
-			"Abstract DigitalDJ Edition", "Toxic DigitalDJ Edition",
-			"Dark Blue DigitalDJ Edition", "Light Blue DigitalDJ Edition",
-			"Squareish DigitalDJ Edition", "SB-Innovation DigitalDJ",
-			"SB-Innovation Butcho", "Dark Blue Butcho Edition",
-			"Light Blue Butcho Edition", "Abstract Butcho Edition",
-			"Light Green Butcho Edition", "Squareish Butcho Edition",
-			"Toxic Butcho Edition", "\"S Mod\" by zoplex",
-			"Original Azureus Splash", "Vuze White Splash",
-			"No Splash Image", "\"Abuze blue frog 1\" by masterchief",
+	public static String[] splashs = new String[]{
+			"Original Vuze Splash",
+			"Dark Blue DDJ Hack by Manas",
+			"\"S2 Mod\" by zoplex",
+			"\"The X Style\" by zoplex",
+			"\"Full red stylish\" by cubieuk",
+			"\"Full red strange\" by unreal666",
+			"\"Blue stylish\" by masterchief",
+			"\"Blue frog\" by masterchief",
+			"\"Green frog\" by masterchief",
+			"\"Brown frog\" by masterchief",
+			"\"Celtic Frog 1\" by Javed",
+			"\"Celtic Frog 2\" by Javed",
+			"\"Hardcore Style\" by Javed",
+			"\"Dark orange frog\" by zoplex",
+			"Abstract DigitalDJ Edition",
+			"Toxic DigitalDJ Edition",
+			"Dark Blue DigitalDJ Edition",
+			"Light Blue DigitalDJ Edition",
+			"Squareish DigitalDJ Edition",
+			"SB-Innovation DigitalDJ",
+			"SB-Innovation Butcho",
+			"Dark Blue Butcho Edition",
+			"Light Blue Butcho Edition",
+			"Abstract Butcho Edition",
+			"Light Green Butcho Edition",
+			"Squareish Butcho Edition",
+			"Toxic Butcho Edition",
+			"\"S Mod\" by zoplex",
+			"Original Azureus Splash",
+			"Vuze White Splash",
+			"No Splash Image",
+			"\"Abuze blue frog 1\" by masterchief",
 			"\"Abuze blue frog 2\" by masterchief",
 			"\"Abuze green frog 1\" by masterchief",
 			"\"Abuze green frog 2\" by masterchief",
-			"Old Vuze Splash", "Tessy", "Vuze Frog", "BiglyBT"
+			"Old Vuze Splash",
+			"Tessy",
+			"Vuze Frog",
+			"BiglyBT"
 	};
 
 	public static boolean checking() {
@@ -64,61 +84,34 @@ public class ShuUI {
 		String tempdir = System.getProperty("java.io.tmpdir", "");
 		String filename = "SBIHack_ReleaseNotes.html";
 		String releaseNotes = "";
-		StringBuffer contents = new StringBuffer();
-		BufferedReader input = null;
+		StringBuilder contents = new StringBuilder();
 
-		try {
-			input = new BufferedReader(new InputStreamReader(
-					ShuUI.class.getResourceAsStream("/" + filename)));
-			String line = null;
-
+		try (BufferedReader input = new BufferedReader(
+				new InputStreamReader(ShuUI.class.getResourceAsStream("/" + filename)))) {
+			String line;
 			while ((line = input.readLine()) != null) {
 				contents.append(line);
 				contents.append(System.getProperty("line.separator"));
 			}
-		} catch (Exception var35) {
-		} finally {
-			try {
-				if (input != null) {
-					input.close();
-				}
-			} catch (Exception var31) {
-			}
+		} catch (Exception ignored) {
 		}
 
 		try {
 			releaseNotes = contents.toString();
-		} catch (Exception var34) {
+		} catch (Exception ignored) {
 		}
 
-		FileWriter fw = null;
-		PrintWriter out = null;
-
-		try {
-			File f = new File(tempdir, filename);
-			fw = new FileWriter(f);
-			out = new PrintWriter(fw);
+		File f = new File(tempdir, filename);
+		try (FileWriter fw = new FileWriter(f);
+			 PrintWriter out = new PrintWriter(fw)) {
 			out.println(releaseNotes);
-			out.close();
-			fw.close();
 			Utils.launch(f.toURI().toURL().toString());
-		} catch (Exception var32) {
-		} finally {
-			try {
-				if (fw != null) {
-					fw.close();
-				}
-				if (out != null) {
-					out.close();
-				}
-			} catch (Exception var30) {
-			}
+		} catch (Exception ignored) {
 		}
 	}
 
 	public static String getSplash() {
-		String sSplashValue = COConfigurationManager.getStringParameter(
-				"Splash Selection", "Original Vuze Splash");
+		String sSplashValue = COConfigurationManager.getStringParameter("Splash Selection", "Original Vuze Splash");
 
 		for (int i = 0; i < splashs.length; ++i) {
 			if (sSplashValue.equals(splashs[i])) {
