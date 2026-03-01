@@ -401,27 +401,13 @@ SESecurityManagerImpl
 		}
 	}
 	
-	@SuppressWarnings("removal")
 	public void
 	stopThread(
 		Thread	t )
 	{
-		synchronized( stoppable_threads ){
-
-			stoppable_threads.add( Thread.currentThread());
-		}
-
-		try{
-
-			t.stop();
-
-		}finally{
-
-			synchronized( stoppable_threads ){
-
-				stoppable_threads.remove( Thread.currentThread());
-			}
-		}
+		// Thread.stop() is removed in modern Java - use interrupt() instead
+		// The target thread must handle InterruptedException properly
+		t.interrupt();
 	}
 
 	protected boolean
