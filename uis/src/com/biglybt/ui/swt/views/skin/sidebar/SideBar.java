@@ -1408,14 +1408,14 @@ public class SideBar
 						if (bShown || menuTree.isDisposed()) {
 							return;
 						}
-						Utils.disposeSWTObjects(menuTree.getItems());
+						Utils.disposeSWTObjects((Object[])menuTree.getItems());
 					}
 				});
 			}
 
 			@Override
 			public void menuShown(MenuEvent e) {
-				Utils.disposeSWTObjects(menuTree.getItems());
+				Utils.disposeSWTObjects((Object[])menuTree.getItems());
 
 				bShown = true;
 				
@@ -1487,14 +1487,14 @@ public class SideBar
 								if (bShown || menuDropDown.isDisposed()) {
 									return;
 								}
-								Utils.disposeSWTObjects(menuDropDown.getItems());
+								Utils.disposeSWTObjects((Object[])menuDropDown.getItems());
 							}
 						});
 					}
 
 					@Override
 					public void menuShown(MenuEvent e) {
-						Utils.disposeSWTObjects(menuDropDown.getItems());
+						Utils.disposeSWTObjects((Object[])menuDropDown.getItems());
 
 						bShown = true;
 

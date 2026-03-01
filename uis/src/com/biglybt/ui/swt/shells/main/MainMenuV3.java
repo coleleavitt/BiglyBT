@@ -121,7 +121,7 @@ public class MainMenuV3
 				@Override
 				public void menuShown(MenuEvent e) {
 					MenuItem[] items = menuDebug.getItems();
-					Utils.disposeSWTObjects(items);
+						Utils.disposeSWTObjects((Object[])items);
 
 					DebugMenuHelper.createDebugMenuItem(menuDebug);
 					/*
@@ -248,7 +248,7 @@ public class MainMenuV3
 			viewMenu.addListener(SWT.Show, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
-					Utils.disposeSWTObjects(viewMenu.getItems());
+					Utils.disposeSWTObjects((Object[])viewMenu.getItems());
 					buildSimpleViewMenu(viewMenu,-1);
 				}
 			});
@@ -263,7 +263,7 @@ public class MainMenuV3
 					public void handleEvent(Event event) {
 						if (event.keyCode == binding_info.accelerator ){
 							if ( !viewMenu.isDisposed()){
-								Utils.disposeSWTObjects(viewMenu.getItems());
+								Utils.disposeSWTObjects((Object[])viewMenu.getItems());
 								buildSimpleViewMenu(viewMenu, event.keyCode);
 							}
 						}

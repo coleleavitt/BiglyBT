@@ -448,6 +448,7 @@ public final class CocoaJavaBridge extends NativeInvocationBridge
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("removal")
     @Override
     protected void finalize() throws Throwable
     {

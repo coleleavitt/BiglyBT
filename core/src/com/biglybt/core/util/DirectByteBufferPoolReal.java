@@ -477,7 +477,7 @@ DirectByteBufferPoolReal
 	    if( DEBUG_PRINT_MEM ) {
 	      System.out.println( "runGarbageCollection()" );
 	    }
-	    System.runFinalization();
+	    // System.runFinalization() removed - deprecated and ineffective in modern Java
 	    System.gc();
 	}
   }

@@ -53,6 +53,7 @@ publishing {
 
 tasks.withType<JavaCompile> {
     options.encoding = "8859_1"
+    options.compilerArgs.addAll(listOf("-Xlint:-options", "-Xlint:-deprecation"))
 }
 
 tasks.withType<Javadoc> {

@@ -401,6 +401,7 @@ SESecurityManagerImpl
 		}
 	}
 	
+	@SuppressWarnings("removal")
 	public void
 	stopThread(
 		Thread	t )

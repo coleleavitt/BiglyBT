@@ -22,7 +22,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
-import java.net.NetPermission;
 import java.net.NetworkInterface;
 import java.security.Permission;
 import java.util.HashSet;
@@ -34,6 +33,7 @@ import com.biglybt.core.config.ConfigKeys;
 import com.biglybt.core.security.SESecurityManager.MySecurityManager;
 import com.biglybt.core.util.SystemProperties;
 
+@SuppressWarnings("removal")
 public final class
 ClientSecurityManager
 	extends SecurityManager
@@ -134,7 +134,7 @@ ClientSecurityManager
 		Permission 	perm,
 		Object 		context)
 	{
-		if ( perm instanceof RuntimePermission ){
+		if ( "java.lang.RuntimePermission".equals(perm.getClass().getName()) ){
 
 			String name = perm.getName();
 
@@ -151,7 +151,7 @@ ClientSecurityManager
 
 				throw( new SecurityException( "Permission Denied"));
 			}
-		}else if ( perm instanceof NetPermission ){
+		}else if ( "java.net.NetPermission".equals(perm.getClass().getName()) ){
 			
 				// we have to fail this permission in order to cause the NetworkInterface code
 				// to revert to calling checkConnect 
