@@ -10,6 +10,8 @@ import com.biglybt.core.peermanager.messaging.Message;
 import com.biglybt.core.peermanager.messaging.MessageException;
 import com.biglybt.core.peermanager.messaging.MessagingUtil;
 import com.biglybt.core.util.*;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 /*
  * Copyright (C) Azureus Software, Inc, All Rights Reserved.
@@ -61,6 +63,13 @@ public class LTHandshake implements LTMessage {
 	@Override
 	public DirectByteBuffer[] getData() {
 		if (buffer_array == null) {
+			// Spoof LTEP client name when PerfectSpoof is active
+			if (PerfectSpoof.isActive && data_dict != null) {
+				PSClient psClient = PerfectSpoof.getClient();
+				if (psClient != null && psClient.getLtepName() != null) {
+					data_dict.put("v", psClient.getLtepName());
+				}
+			}
 			buffer_array = new DirectByteBuffer[1];
 			DirectByteBuffer buffer = DirectByteBufferPool.getBuffer(DirectByteBuffer.AL_MSG_LT_HANDSHAKE, getBencodedData().length);
 			buffer_array[0] = buffer;

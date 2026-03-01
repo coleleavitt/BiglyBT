@@ -6505,6 +6505,21 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 	}
 
 	@Override
+	public long getSentFake(){
+		return(disk_mgr.getDownload().getStats().getSentFake());
+	}
+
+	@Override
+	public long getReceivedFake(){
+		return(disk_mgr.getDownload().getStats().getReceivedFake());
+	}
+
+	@Override
+	public long getRemainingFake(){
+		return(disk_mgr.getDownload().getStats().getRemainingFake());
+	}
+
+	@Override
 	public int[] getMaxConnections(){
 		return(adapter.getMaxConnections());
 	}
@@ -7735,6 +7750,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 		public long getTotalBytesDownloadedByPeer(){
 			return(_stats.getTotalDataBytesReceived() + _stats.getTotalProtocolBytesReceived());
 		}
+
 
 		public void diskReadComplete(long bytes){
 		}

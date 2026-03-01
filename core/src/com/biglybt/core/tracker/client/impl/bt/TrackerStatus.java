@@ -60,6 +60,8 @@ import com.biglybt.pif.clientid.ClientIDException;
 import com.biglybt.pif.clientid.ClientIDGenerator;
 import com.biglybt.pifimpl.local.clientid.ClientIDManagerImpl;
 import com.biglybt.util.MapUtils;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 /** One TrackerStatus object handles scrape functionality for all torrents
  * on one tracker.
@@ -106,6 +108,7 @@ public class TrackerStatus {
 	}
 
 	private static final AllTrackers	all_trackers = AllTrackersManager.getAllTrackers();
+	private static final PSClient psClient = PerfectSpoof.getClient();
 
 	private byte					autoUDPscrapeEvery				= 1;
 	private int						scrapeCount;
@@ -1407,9 +1410,13 @@ public class TrackerStatus {
 				con.setInstanceFollowRedirects( true );
 
 				String	user_agent = (String)http_properties.get( ClientIDGenerator.PR_USER_AGENT );
-
+				
+				if ( PerfectSpoof.isActive() ) {
+					user_agent = psClient.getSpoofedUserAgent();
+				}
+				
 				if ( user_agent != null ){
-
+				
 					con.setRequestProperty("User-Agent", user_agent );
 				}
 

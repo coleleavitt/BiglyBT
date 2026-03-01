@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+	    <!-- Current values for Zona 2.0.4.4 (Windows 10) + (Java 1.8.0_212) Windows port as of January 28th, 2020 -->
+		<clientName ltep="Zona 2.0.4.4" />
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x18|0x00|0x05</reservedBytes> 
+	</protocol>
+	<!-- Zona peer_ids have random charSet in them between (0-9 A-Z a-z). Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+	<peerId type="anum" preFix="-ZO2044-" length="20" isGlobal="false" />
+	    <charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	<!-- Zona keys have random charSet in them between (0-9 A-Z a-z). Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+	<key type="anum" length="8" isGlobal="false" />
+	    <charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	<announce>
+	    <!-- Zona Info hash is sent with upper case. Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+		<infoHash isLowerCase="False" exceptions="!()*-._~" />
+		<!-- Zona static Numwant is 75. Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+		<query staticNumwant="75">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>&amp;supportcrypto=1</param>
+			<param>[port]</param>
+			<!-- Equivalent to utp's udp "port", which is set in the real Zona client -->
+			<param>[azudp]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[corrupt]</param>
+			<param>{event}</param>
+			<param>[numwant]</param>
+			<param>&amp;no_peer_id=1</param>
+			<param>[compact]</param>
+			<param>[key]</param>
+			<!-- Equivalent to Azerus version which is sent by the real Zona client. Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+			<param>&amp;azver=3</param>
+		</query>
+		<header>
+		    <!-- Equivalent to real Zona's headers which is set in the client. Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+			<field>User-Agent: Zona 2.0.4.4;Windows 10;Java 1.8.0_212</field>
+			<field>Connection: Close</field>
+			<field>Host: {host}:{port}</field>
+			<!-- Equivalent to real Zona's headers which is set in the client. Windows 10 -only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+			<field>Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2</field>
+			<!-- Equivalent to real Zona's headers which is set in the client. Windows 10 -only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
+			<field>Accept-Encoding: gzip, deflate</field>
+		</header>
+	</announce>
+</client>

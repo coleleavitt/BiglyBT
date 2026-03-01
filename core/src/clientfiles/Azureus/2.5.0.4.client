@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="azmp">
+		<clientName ltep="Azureus 2.5.0.4" azmp="Azureus" />
+		<clientVersion azmp="2.5.0.4" />
+		<reservedBytes>0x80|0x00|0x00|0x00|0x00|0x00|0x00|0x00</reservedBytes> 
+	</protocol>
+	<peerId type="anum" preFix="-AZ2504-" length="20" />
+	<key type="anum" length="8" />
+	<announce>
+		<infoHash exceptions="*-._" />
+		<query>
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>{supportcrypto}</param>
+			<param>{requirecrypto}</param>
+			<param>[port]</param>
+			<param>{cryptoport}</param>
+			<param>[azudp]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>{event}</param>
+			<param>[numwant]</param>
+			<param>[no_peer_id]</param>
+			<param>[compact]</param>
+			<param>[key]</param>
+			<param>[azver]</param>
+		</query>
+		<header>
+			<field>User-Agent: Azureus 2.5.0.4;{osName};{javaVersion}</field>
+			<field>Connection: close</field>
+			<field>Accept-Encoding: gzip</field>
+			<field>Host: {host}:{port}</field>
+			<field>Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2</field>
+		</header>
+	</announce>
+</client>

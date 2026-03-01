@@ -126,6 +126,7 @@ import com.biglybt.plugin.upnp.UPnPPlugin;
 import com.biglybt.ui.UIFunctions;
 import com.biglybt.ui.UIFunctionsManager;
 import com.biglybt.util.MapUtils;
+import ghostfucker.spoof.PerfectSpoof;
 
 /**
  * @author parg
@@ -257,6 +258,8 @@ CoreImpl
 			}
 	
 			COConfigurationManager.initialise();
+			PerfectSpoof.initialize();
+
 	
 			if (DEBUG_STARTUPTIME) {
 				logTime("ConfigMan.init");
@@ -976,6 +979,8 @@ CoreImpl
 			}
 
 			started	= true;
+
+		PerfectSpoof.initialize();
 
 		}finally{
 

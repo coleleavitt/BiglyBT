@@ -382,6 +382,7 @@ public class ConfigView implements UISWTViewCoreEventListener, ConfigSectionRepo
                                          new ConfigSectionConnectionAdvanced(),
                                          new ConfigSectionConnectionEncryption(),
                                          new ConfigSectionConnectionDNS(),
+                                         new ConfigSectionSpoofing(),
                                          new ConfigSectionTransfer(),
                                          new ConfigSectionTransferAutoSpeedSelect(),
                                          new ConfigSectionTransferAutoSpeedClassic(),

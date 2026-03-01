@@ -111,6 +111,11 @@ DownloadManagerStatsImpl
 
 	private long saved_completed_download_bytes = -1;
 
+	// Fake stats for extreme mod
+	private long totalDataBytesReceivedFake;
+	private long totalDataBytesSentFake;
+	private long remainingFake;
+	private long completedFake;
 	private int max_upload_rate_bps = 0;  //0 for unlimited
 	private int max_download_rate_bps = 0;  //0 for unlimited
 
@@ -1692,6 +1697,48 @@ DownloadManagerStatsImpl
 		return( result );
 	}
 
+
+	// --- Fake stats getters/setters for extreme mod ---
+
+	public long getTotalDataBytesReceivedFake() {
+		return totalDataBytesReceivedFake;
+	}
+
+	public void setTotalDataBytesReceivedFake(long value) {
+		totalDataBytesReceivedFake = value;
+	}
+
+	public long getTotalDataBytesSentFake() {
+		return totalDataBytesSentFake;
+	}
+
+	public void setTotalDataBytesSentFake(long value) {
+		totalDataBytesSentFake = value;
+	}
+
+	public long getReceivedFake() {
+		return totalDataBytesReceivedFake;
+	}
+
+	public long getSentFake() {
+		return totalDataBytesSentFake;
+	}
+
+	public long getRemainingFake() {
+		return remainingFake;
+	}
+
+	public void setRemainingFake(long value) {
+		remainingFake = value;
+	}
+
+	public long getCompletedFake() {
+		return completedFake;
+	}
+
+	public void setCompletedFake(long value) {
+		completedFake = value;
+	}
 
 	protected void
 	generateEvidence(

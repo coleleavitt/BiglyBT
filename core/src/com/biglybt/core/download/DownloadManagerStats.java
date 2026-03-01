@@ -299,4 +299,11 @@ DownloadManagerStats
 	public int getPercentDoneExcludingDND();
 
 	public int[] getFilePriorityStats();
+
+	// Fake stats methods for extreme mod
+	public long getSentFake();
+
+	public long getReceivedFake();
+
+	public long getRemainingFake();
 }

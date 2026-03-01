@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+		<clientName ltep="Transmission 2.94" />
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x18|0x00|0x05</reservedBytes>
+	</protocol>
+	<peerId type="anum" preFix="-TR2940-" length="20" isGlobal="true">
+		<charSet>0123456789abcdefghijklmnopqrstuvwxyz</charSet>
+	</peerId>
+	<key type="anum" length="8" isGlobal="false">
+                <charSet>0123456789abcdefghijklmnopqrstuvwxyz</charSet>
+	</key>
+	<announce>
+		<infoHash isLowerCase="true" exceptions="!()*-._~" />
+		<query staticNumwant="200">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[numwant]</param>
+			<param>[key]</param>
+			<param>[compact]</param>
+			<param>&amp;supportcrypto=1</param>
+			<param>{event}</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<field>User-Agent: Transmission/2.94</field>
+			<field>Accept: */*</field>
+			<field>Accept-Encoding: identity</field>
+		</header>
+	</announce>
+</client>

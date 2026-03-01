@@ -66,6 +66,7 @@ public class ConsoleConfigSections
 			new ConfigSectionConnectionAdvanced(),
 			new ConfigSectionConnectionEncryption(),
 			new ConfigSectionConnectionDNS(),
+			new ConfigSectionSpoofing(),
 			new ConfigSectionTransfer(),
 			new ConfigSectionTransferAutoSpeedSelect(),
 			new ConfigSectionTransferAutoSpeedClassic(),

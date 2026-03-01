@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="btlp">
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00</reservedBytes>
+	</protocol>
+		<peerId type="anum" preFix="T03H-----" length="20" />
+	<key type="anum" length="6" />
+	<announce>
+		<infoHash exceptions="-._/" />
+		<query>
+			<param>?info_hash={info_hash}</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[no_peer_id]</param>
+			<param>[compact]</param>
+			<param>{event}</param>
+			<param>[key]</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<field>Accept-Encoding: gzip</field>
+			<field>User-Agent: BitTornado/T-0.3.17</field>
+		</header>
+	</announce>
+	<scrape isDisabled="true"/>
+</client>

@@ -27,18 +27,21 @@ import com.biglybt.core.util.ByteFormatter;
 import com.biglybt.core.util.DirectByteBuffer;
 import com.biglybt.core.util.DirectByteBufferPool;
 import com.biglybt.core.util.RandomUtils;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 
 /**
  * BitTorrent handshake message.
  */
 public class BTHandshake implements BTMessage, RawMessage {
+  private static final PSClient psClient = PerfectSpoof.getClient();
   public static final String PROTOCOL = "BitTorrent protocol";
 
   // No reserve bits set.
-  private static final byte[] BT_RESERVED = new byte[]{0, 0, 0, 0, 0, 0, 0, 0 };
+  private static final byte[] BT_RESERVED;
 
-  private static final byte[] LT_RESERVED = new byte[]{0, 0, 0, 0, 0, (byte)16, 0, 0 };
+  private static final byte[] LT_RESERVED;
 
   // Set first bit of first byte to indicate advanced AZ messaging support. (128)
   // Set fourth bit of fifth byte to indicate LT messaging support. (16)
@@ -46,39 +49,47 @@ public class BTHandshake implements BTMessage, RawMessage {
   // Set seventh bit (2) and eight bit (1) to force AZMP over LTEP. [current behaviour]
   // Set seventh bit (2) only to prefer AZMP over LTEP.
   // Set eighth bit (1) only to prefer LTEP over AZMP.
-  public static final byte[] AZ_RESERVED = new byte[]{(byte)128, 0, 0, 0, 0, (byte)19, 0, 0 };
+  public static final byte[] AZ_RESERVED;
 
   public static final int BT_RESERVED_MODE	= 0;
   public static final int LT_RESERVED_MODE	= 1;
   public static final int AZ_RESERVED_MODE	= 2;
 
-  private static final byte[][] RESERVED = { BT_RESERVED, LT_RESERVED, AZ_RESERVED };
+  private static final byte[][] RESERVED;
 
   public static void setMainlineDHTEnabled(boolean enabled) {
-	  if (enabled) {
-		  LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x01);
-		  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x01);
-	  }
-	  else {
-		  LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xFE);
-		  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xFE);
+	  if (!PerfectSpoof.isActive) {
+		  if (enabled) {
+			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x01);
+			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x01);
+		  }
+		  else {
+			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xFE);
+			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xFE);
+		  }
 	  }
   }
 
   public static final boolean FAST_EXTENSION_ENABLED = true;
 
   public static void setFastExtensionEnabled(boolean enabled) {
-	  if (enabled) {
-		  LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x04);
-		  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x04);
-	  }
-	  else {
-		  LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xF3);
-		  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xF3);
+	  if (!PerfectSpoof.isActive) {
+		  if (enabled) {
+			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x04);
+			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x04);
+		  }
+		  else {
+			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xF3);
+			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xF3);
+		  }
 	  }
   }
 
   static{
+	  BT_RESERVED = PerfectSpoof.isActive ? psClient.getReservedBytes() : new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
+	  LT_RESERVED = PerfectSpoof.isActive ? psClient.getReservedBytes() : new byte[]{0, 0, 0, 0, 0, (byte)16, 0, 0};
+	  AZ_RESERVED = PerfectSpoof.isActive ? psClient.getReservedBytes() : new byte[]{(byte)128, 0, 0, 0, 0, (byte)19, 0, 0};
+	  RESERVED = new byte[][]{ BT_RESERVED, LT_RESERVED, AZ_RESERVED };
 	  setFastExtensionEnabled( FAST_EXTENSION_ENABLED );
   }
 

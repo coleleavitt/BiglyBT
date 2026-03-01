@@ -450,62 +450,93 @@ DownloadManagerController
 	    			}
 
 	    			@Override
-				    public long
+	    		    public long
 	    			getTotalSent()
 	    			{
-	    				return( tracker_stats_exclude_lan?pm_stats.getTotalDataBytesSentNoLan():pm_stats.getTotalDataBytesSent());
-	    			}
-
-	    			@Override
-				    public long
-	    			getTotalReceived()
-	    			{
-	    				long received 	= tracker_stats_exclude_lan?pm_stats.getTotalDataBytesReceivedNoLan():pm_stats.getTotalDataBytesReceived();
-	    				long discarded 	= pm_stats.getTotalDiscarded();
-	    				long failed		= pm_stats.getTotalHashFailBytes();
-
-	    				long verified = received - ( discarded + failed );
-
-	    				verified -= temp.getHiddenBytes();
-
-	    					// ensure we don't go backwards. due to lack of atomicity of updates and possible
-	    					// miscounting somewhere we have seen this occur
-
-	    				if ( verified < last_reported_total_received ){
-
-	    					verified = last_reported_total_received;
-
-	    						// use -1 as indicator that we've reported this event
-
-	    					if ( last_reported_total_received_data != -1 ){
-
-	    						/*
-	    						Debug.out(
-	    								getDisplayName() + ": decrease in overall downloaded - " +
-	    								"data=" + received + "/" + last_reported_total_received_data +
-	    								",discard=" + discarded + "/" + last_reported_total_received_discard +
-	    								",fail=" + failed + "/" + last_reported_total_received_failed );
-	    						*/
-
-	    						last_reported_total_received_data = -1;
-	    					}
-	    				}else{
-
-	    					last_reported_total_received = verified;
-
-	    					last_reported_total_received_data		= received;
-	    					last_reported_total_received_discard	= discarded;
-	    					last_reported_total_received_failed		= failed;
+	    				float uploadKickerUpload = download_manager.getUploadKickerValue();
+	    				if ( uploadKickerUpload != 0.0F ){
+	    					uploadKickerUpload *= 1048576.0F;
+	    					download_manager.setUploadKickerValue( 0.0F );
+	    					download_manager.refreshUploadKickerValue();
 	    				}
 
-	    				return( verified < 0?0:verified );
+	    				boolean enableFake = download_manager.getFakeOption(1);
+	    				boolean FakeOffFakeAddedToReal = download_manager.getFakeOption(0);
+	    				boolean ratioTool = download_manager.getFakeOption(31);
+	    				if ( enableFake ){
+	    					boolean safeFakeUpload = download_manager.getFakeOption(20);
+	    					if ( safeFakeUpload ){
+	    						long sentFake = temp.getSentFake();
+	    						long fileSize = temp.getDiskManager().getTotalLength();
+	    						float multiCoef = download_manager.getFakeFloatValue(8);
+	    						if ( (float)sentFake > (float)fileSize * multiCoef ){
+	    							return( (long)((float)fileSize * multiCoef) + (long)uploadKickerUpload );
+	    						}
+	    					}
+	    					return( temp.getSentFake() + (long)uploadKickerUpload );
+	    				}else{
+	    					return( (!FakeOffFakeAddedToReal || enableFake) && !ratioTool ? (tracker_stats_exclude_lan?pm_stats.getTotalDataBytesSentNoLan():pm_stats.getTotalDataBytesSent()) + (long)uploadKickerUpload : temp.getSentFake() + (long)uploadKickerUpload );
+	    				}
 	    			}
 
 	    			@Override
-				    public long
+	    		    public long
+	    			getTotalReceived()
+	    			{
+	    				boolean enableFake = download_manager.getFakeOption(1);
+	    				boolean ratioTool = download_manager.getFakeOption(31);
+	    				if ( !enableFake && !ratioTool ){
+	    					long received 	= tracker_stats_exclude_lan?pm_stats.getTotalDataBytesReceivedNoLan():pm_stats.getTotalDataBytesReceived();
+	    					long discarded 	= pm_stats.getTotalDiscarded();
+	    					long failed		= pm_stats.getTotalHashFailBytes();
+
+	    					long verified = received - ( discarded + failed );
+
+	    					verified -= temp.getHiddenBytes();
+
+	    						// ensure we don't go backwards. due to lack of atomicity of updates and possible
+	    						// miscounting somewhere we have seen this occur
+
+	    					if ( verified < last_reported_total_received ){
+
+	    						verified = last_reported_total_received;
+
+	    							// use -1 as indicator that we've reported this event
+
+	    						if ( last_reported_total_received_data != -1 ){
+
+	    							/*
+	    							Debug.out(
+	    									getDisplayName() + ": decrease in overall downloaded - " +
+	    									"data=" + received + "/" + last_reported_total_received_data +
+	    									",discard=" + discarded + "/" + last_reported_total_received_discard +
+	    									",fail=" + failed + "/" + last_reported_total_received_failed );
+	    							*/
+
+	    							last_reported_total_received_data = -1;
+	    						}
+	    					}else{
+
+	    						last_reported_total_received = verified;
+
+	    						last_reported_total_received_data		= received;
+	    						last_reported_total_received_discard	= discarded;
+	    						last_reported_total_received_failed		= failed;
+	    					}
+
+	    					return( verified < 0?0:verified );
+	    				}else{
+	    					return( temp.getReceivedFake() );
+	    				}
+	    			}
+
+	    			@Override
+	    		    public long
 	    			getRemaining()
 	    			{
-	    				return( Math.max( temp.getRemaining(), temp.getHiddenBytes()));
+	    				boolean enableFake = download_manager.getFakeOption(1);
+	    				boolean ratioTool = download_manager.getFakeOption(31);
+	    				return( !enableFake && !ratioTool ? Math.max( temp.getRemaining(), temp.getHiddenBytes()) : temp.getRemainingFake() );
 	    			}
 
 	    			@Override
@@ -686,6 +717,23 @@ DownloadManagerController
 					{
 						return( DownloadManagerController.this.isPeerSourceEnabled( peer_source ));
 					}
+
+					@Override
+					public boolean
+					getFakeOption(
+						int		i )
+					{
+						return( DownloadManagerController.this.download_manager.getFakeOption( i ));
+					}
+
+					@Override
+					public boolean
+					getGeneralOption(
+						int		i )
+					{
+						return( DownloadManagerController.this.download_manager.getGeneralOption( i ));
+					}
+
 	    		});
 
 

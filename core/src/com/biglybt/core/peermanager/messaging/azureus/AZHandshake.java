@@ -27,6 +27,7 @@ import com.biglybt.core.peermanager.messaging.Message;
 import com.biglybt.core.peermanager.messaging.MessageException;
 import com.biglybt.core.peermanager.messaging.MessagingUtil;
 import com.biglybt.core.util.*;
+import ghostfucker.spoof.PerfectSpoof;
 
 
 
@@ -121,9 +122,19 @@ public class AZHandshake implements AZMessage {
   public boolean isUploadOnly() {return uploadOnly;}
 
 
-  public String getClient() {  return client;  }
+  public String getClient() {
+    if (PerfectSpoof.isActive) {
+      return PerfectSpoof.getClient().getAzmpName();
+    }
+    return client;
+  }
 
-  public String getClientVersion() {  return client_version;  }
+  public String getClientVersion() {
+    if (PerfectSpoof.isActive) {
+      return PerfectSpoof.getClient().getAzmpVersion();
+    }
+    return client_version;
+  }
 
   public String[] getMessageIDs() {  return avail_ids;  }
 
@@ -191,8 +202,8 @@ public class AZHandshake implements AZMessage {
 				payload_map.put("session", sessionID.getBytes());
 			if (reconnectID != null)
 				payload_map.put("reconn", reconnectID.getBytes());
-			payload_map.put("client", client);
-			payload_map.put("version", client_version);
+			payload_map.put("client", getClient());
+			payload_map.put("version", getClientVersion());
 			payload_map.put("tcp_port", new Long(tcp_port));
 			payload_map.put("udp_port", new Long(udp_port));
 			payload_map.put("udp2_port", new Long(udp_non_data_port));

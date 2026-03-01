@@ -116,6 +116,7 @@ import com.biglybt.ui.swt.imageloader.ImageLoader;
 import com.biglybt.ui.swt.mdi.MdiEntrySWT;
 import com.biglybt.ui.swt.mdi.MultipleDocumentInterfaceSWT;
 
+import ghostfucker.proleech.ProleechImpl;
 /**
  * @author Allan Crooks
  *
@@ -1535,6 +1536,41 @@ public class TorrentUtil
 					exportHTTPSeeds(dms);
 				}
 			});
+
+			// Advanced > Export > Export ProLeech Torrent(s)
+			new MenuItem(menuExport, SWT.SEPARATOR);
+			final MenuItem itemExportProleech = new MenuItem(menuExport, SWT.PUSH);
+			Messages.setLanguageText(itemExportProleech, "MyTorrentsView.menu.exportproleech");
+			itemExportProleech.addListener(SWT.Selection, new ListenerDMTask(dms) {
+				@Override
+				public void run(DownloadManager[] dms) {
+					Utils.getOffOfSWTThread(() -> {
+						try {
+							new ProleechImpl().exportTorrents(dms);
+							Utils.execSWTThread(() -> {
+								MessageBoxShell mb = new MessageBoxShell(
+										SWT.ICON_INFORMATION | SWT.OK,
+										MessageText.getString("MyTorrentsView.menu.exportproleech.success.title"),
+										MessageText.getString("MyTorrentsView.menu.exportproleech.success.msg",
+												new String[]{ String.valueOf(dms.length) }));
+								mb.open(null);
+							});
+						} catch (Exception e) {
+							Logger.log(new LogAlert(false, LogAlert.AT_ERROR,
+									"[ProLeech]: Export failed.", e));
+							Utils.execSWTThread(() -> {
+								MessageBoxShell mb = new MessageBoxShell(
+										SWT.ICON_ERROR | SWT.OK,
+										MessageText.getString("MyTorrentsView.menu.exportproleech.fail.title"),
+										MessageText.getString("MyTorrentsView.menu.exportproleech.fail.msg",
+												new String[]{ e.getMessage() }));
+								mb.open(null);
+							});
+						}
+					});
+				}
+			});
+			itemExportProleech.setEnabled(hasSelection);
 		} // export menu
 
 		// === advanced > options ===
@@ -1970,6 +2006,10 @@ public class TorrentUtil
 			}
 		});
 		itemRemove.setEnabled(hasSelection);
+
+
+		// === ProLeech Export (top-level quick access) ===
+		new ProleechImpl().addToMenu(menu, dms, hasSelection);
 
 	}
 

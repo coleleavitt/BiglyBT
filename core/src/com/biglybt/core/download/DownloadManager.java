@@ -940,4 +940,12 @@ DownloadManager
 
 	public void
 	requestAttention();
+	boolean getFakeOption(int optionNumber);
+	boolean getGeneralOption(int optionNumber);
+
+	// Upload Kicker support for spoofing
+	float getUploadKickerValue();
+	void setUploadKickerValue(float value);
+	void refreshUploadKickerValue();
+	float getFakeFloatValue(int optionNumber);
 }

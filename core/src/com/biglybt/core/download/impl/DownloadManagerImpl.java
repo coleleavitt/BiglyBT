@@ -2797,6 +2797,22 @@ DownloadManagerImpl
 						{
 							return( 0 );
 						}
+
+						@Override
+						public boolean
+						getFakeOption(
+							int		optionNumber )
+						{
+							return( DownloadManagerImpl.this.getFakeOption( optionNumber ));
+						}
+
+						@Override
+						public boolean
+						getGeneralOption(
+							int		optionNumber )
+						{
+							return( DownloadManagerImpl.this.getGeneralOption( optionNumber ));
+						}
 					});
   				
 				_tracker_client_for_queued_download.update( true );
@@ -7978,4 +7994,50 @@ DownloadManagerImpl
 	{
 		globalManager.fireGlobalManagerEvent( eventType, this, eventData );
 	}
+
+	@Override
+	public boolean
+	getFakeOption(int optionNumber)
+	{
+		return COConfigurationManager.getBooleanParameter("fake.option." + optionNumber, false);
+	}
+
+	@Override
+	public boolean
+	getGeneralOption(int optionNumber)
+	{
+		return COConfigurationManager.getBooleanParameter("general.option." + optionNumber, false);
+	}
+
+	// Upload Kicker support for spoofing
+	private volatile float uploadKickerValue = 0.0F;
+
+	@Override
+	public float
+	getUploadKickerValue()
+	{
+		return uploadKickerValue;
+	}
+
+	@Override
+	public void
+	setUploadKickerValue(float value)
+	{
+		this.uploadKickerValue = value;
+	}
+
+	@Override
+	public void
+	refreshUploadKickerValue()
+	{
+		// Trigger stats refresh if needed
+	}
+
+	@Override
+	public float
+	getFakeFloatValue(int optionNumber)
+	{
+		return COConfigurationManager.getFloatParameter("fake.float." + optionNumber, 1.0F);
+	}
+
 }

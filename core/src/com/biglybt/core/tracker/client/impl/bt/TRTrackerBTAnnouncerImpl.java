@@ -71,6 +71,8 @@ import com.biglybt.pif.clientid.ClientIDGenerator;
 import com.biglybt.pif.download.DownloadAnnounceResult;
 import com.biglybt.pif.download.DownloadAnnounceResultPeer;
 import com.biglybt.pifimpl.local.clientid.ClientIDManagerImpl;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 /**
  *
@@ -106,6 +108,7 @@ TRTrackerBTAnnouncerImpl
 	}
 	
 	private static final AllTrackers	all_trackers = AllTrackersManager.getAllTrackers();
+	private static final PSClient psClient = PerfectSpoof.getClient();
 
 	static void
 	analyseTimerEvents()
@@ -1922,12 +1925,24 @@ TRTrackerBTAnnouncerImpl
 	
 			con.setInstanceFollowRedirects( true );
 	
-	 		String	user_agent = (String)http_properties.get( ClientIDGenerator.PR_USER_AGENT );
-	
-	 		if ( user_agent != null ){
-	
-	 			con.setRequestProperty("User-Agent", user_agent );
-	 		}
+ 		String	user_agent = (String)http_properties.get( ClientIDGenerator.PR_USER_AGENT );
+
+ 		if (PerfectSpoof.isActive()) {
+ 			try {
+ 				String spoofedUserAgent = psClient.getUserAgent();
+ 				if (spoofedUserAgent != null) {
+ 					con.setRequestProperty("User-Agent", spoofedUserAgent);
+ 				} else if (user_agent != null) {
+ 					con.setRequestProperty("User-Agent", user_agent);
+ 				}
+ 			} catch (Exception e) {
+ 				if (user_agent != null) {
+ 					con.setRequestProperty("User-Agent", user_agent);
+ 				}
+ 			}
+ 		} else if (user_agent != null) {
+ 			con.setRequestProperty("User-Agent", user_agent);
+ 		}
 	
 	 		con.setRequestProperty("Connection", "close" );
 	
@@ -2632,7 +2647,22 @@ TRTrackerBTAnnouncerImpl
   		// us to the URL, so don't change it!
 
   	request.append(info_hash);
-  	request.append(tracker_peer_id_str);
+	if (PerfectSpoof.isActive()) {
+		try {
+			byte[] spoofedPeerId = psClient.getPeerId();
+			if (spoofedPeerId != null) {
+				request.append("&peer_id=").append(URLEncoder.encode(
+					new String(spoofedPeerId, Constants.BYTE_ENCODING_CHARSET),
+					Constants.BYTE_ENCODING_CHARSET.name()).replaceAll("\\+", "%20"));
+			} else {
+				request.append(tracker_peer_id_str);
+			}
+		} catch (Exception e) {
+			request.append(tracker_peer_id_str);
+		}
+	} else {
+		request.append(tracker_peer_id_str);
+	}
 
   	int tcp_port = announce_data_provider.getTCPListeningPortNumber();
   	
@@ -2906,7 +2936,20 @@ TRTrackerBTAnnouncerImpl
 
     if ( COConfigurationManager.getBooleanParameter("Tracker Key Enable Client", true )){
 
-      	request.append( "&key=").append( helper.getTrackerKey());
+      	if (PerfectSpoof.isActive()) {
+      		try {
+      			String spoofedKey = psClient.getKey();
+      			if (spoofedKey != null) {
+      				request.append("&key=").append(spoofedKey);
+      			} else {
+      				request.append("&key=").append(helper.getTrackerKey());
+      			}
+      		} catch (Exception e) {
+      			request.append("&key=").append(helper.getTrackerKey());
+      		}
+      	} else {
+      		request.append("&key=").append(helper.getTrackerKey());
+      	}
     }
 
 	String	ext = announce_data_provider.getExtensions();

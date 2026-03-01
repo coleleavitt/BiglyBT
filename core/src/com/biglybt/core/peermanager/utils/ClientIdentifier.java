@@ -20,6 +20,7 @@ package com.biglybt.core.peermanager.utils;
 import com.biglybt.core.internat.MessageText;
 import com.biglybt.core.util.AENetworkClassifier;
 import com.biglybt.core.util.ByteFormatter;
+import ghostfucker.spoof.PerfectSpoof;
 
 public class ClientIdentifier {
 
@@ -47,6 +48,11 @@ public class ClientIdentifier {
 	}
 
 	public static String identifyAZMP(String peer_id_client_name, String az_msg_client_name, String az_msg_client_version, byte[] peer_id) {
+
+		// Bypass client detection when spoofing is active to prevent discrepancy flags
+		if (PerfectSpoof.isActive) {
+			return az_msg_client_name + " " + az_msg_client_version;
+		}
 
 		/**
 		 * Hack for BitTyrant - the handshake resembles this:
@@ -154,6 +160,11 @@ public class ClientIdentifier {
 
 	public static String identifyLTEP(String peer_id_name, String handshake_name, byte[] peer_id) {
 		if (handshake_name == null) {return peer_id_name;}
+
+		// Bypass client detection when spoofing is active to prevent discrepancy flags
+		if (PerfectSpoof.isActive) {
+			return handshake_name;
+		}
 
 		/**
 		 * Official BitTorrent clients should still be shown as Mainline.

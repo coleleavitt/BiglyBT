@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+		<clientName ltep="µTorrent 1.5" isEncodingDisabled="true" />
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x00</reservedBytes> 
+	</protocol>
+	<peerId type="ut" preFix="-UT1500-%b5%81" length="20" exceptions="-._~" isLowerCase="true" isGlobal="true" />
+	<key type="hex" length="8" isGlobal="true" />
+	<announce>
+		<infoHash isLowerCase="true" exceptions="-._~" />
+		<query staticNumwant="200">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[key]</param>
+			<param>{event}</param>
+			<param>[numwant]</param>
+			<param>[compact]</param>
+			<param>[no_peer_id]</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<field>User-Agent: uTorrent/1500</field>
+			<field>Accept-Encoding: gzip</field>
+		</header>
+	</announce>
+</client>

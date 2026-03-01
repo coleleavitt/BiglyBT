@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+		<!-- Current values for the 2.94+ (4a4233feae) Windows port as of January 8th, 2019 -->
+		<clientName ltep="Transmission 2.94+" />
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x04</reservedBytes>
+	</protocol>
+	<!-- Transmission peer_ids have a checksum in them; this generates a "good enough" ID -->
+	<peerId type="anum" preFix="-TR294Z-" length="20" isGlobal="false">
+		<charSet>0123456789abcdefghijklmnopqrstuvwxyz</charSet>
+	</peerId>
+	<!-- Transmission keys are the hexadecimal representation of a random number between 1 and 2,147,483,647; this length and charset (note the lack of a zero) are a workaround to generate real-looking ones -->
+	<key type="anum" length="7" isGlobal="true">
+		<charSet>123456789abcdef</charSet>
+	</key>
+	<announce>
+		<infoHash isLowerCase="true" exceptions="-._~"/>
+		<!-- Windows-only? See http://www.sb-innovation.de/showthread.php?p=350188 -->
+		<query staticNumwant="80">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[numwant]</param>
+			<param>[key]</param>
+			<param>[compact]</param>
+			<!-- Equivalent to "prefer encryption", which you must be using in the real Transmission -->
+			<param>&amp;supportcrypto=1</param>
+			<param>{event}</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<field>User-Agent: Transmission/2.94+</field>
+			<field>Accept: */*</field>
+			<!-- Windows-only? See http://www.sb-innovation.de/showthread.php?p=350188 -->
+			<field>Accept-Encoding: identity</field>
+		</header>
+	</announce>
+</client>
