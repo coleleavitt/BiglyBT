@@ -25,6 +25,7 @@ import java.util.List;
 import com.biglybt.pifimpl.local.ui.config.ConfigSectionRepository;
 import com.biglybt.pifimpl.local.ui.config.ParameterImpl;
 import com.biglybt.ui.config.*;
+import com.biglybt.ui.swt.views.configsections.ConfigSectionShu;
 
 import com.biglybt.pif.ui.config.Parameter;
 
@@ -67,6 +68,7 @@ public class ConsoleConfigSections
 			new ConfigSectionConnectionEncryption(),
 			new ConfigSectionConnectionDNS(),
 			new ConfigSectionSpoofing(),
+			new ConfigSectionShu(),
 			new ConfigSectionTransfer(),
 			new ConfigSectionTransferAutoSpeedSelect(),
 			new ConfigSectionTransferAutoSpeedClassic(),
