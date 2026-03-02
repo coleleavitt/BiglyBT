@@ -35,62 +35,86 @@ import ghostfucker.spoof.client.PSClient;
  * BitTorrent handshake message.
  */
 public class BTHandshake implements BTMessage, RawMessage {
-  private static final PSClient psClient = PerfectSpoof.getClient();
+  // NOTE: Don't cache PSClient - use PerfectSpoof.getClient() dynamically
   public static final String PROTOCOL = "BitTorrent protocol";
 
-  // No reserve bits set.
-  private static final byte[] BT_RESERVED;
+  // Default reserve bytes (used when spoofing is NOT active)
+  private static final byte[] DEFAULT_BT_RESERVED = new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
+  private static final byte[] DEFAULT_LT_RESERVED = new byte[]{0, 0, 0, 0, 0, (byte)16, 0, 0};
+  private static final byte[] DEFAULT_AZ_RESERVED = new byte[]{(byte)128, 0, 0, 0, 0, (byte)19, 0, 0};
 
-  private static final byte[] LT_RESERVED;
+  // Mutable reserved bytes (can be updated when spoofing activates)
+  private static byte[] BT_RESERVED = DEFAULT_BT_RESERVED.clone();
+  private static byte[] LT_RESERVED = DEFAULT_LT_RESERVED.clone();
+  private static byte[] AZ_RESERVED = DEFAULT_AZ_RESERVED.clone();
 
-  // Set first bit of first byte to indicate advanced AZ messaging support. (128)
-  // Set fourth bit of fifth byte to indicate LT messaging support. (16)
+  public static final int BT_RESERVED_MODE = 0;
+  public static final int LT_RESERVED_MODE = 1;
+  public static final int AZ_RESERVED_MODE = 2;
 
-  // Set seventh bit (2) and eight bit (1) to force AZMP over LTEP. [current behaviour]
-  // Set seventh bit (2) only to prefer AZMP over LTEP.
-  // Set eighth bit (1) only to prefer LTEP over AZMP.
-  public static final byte[] AZ_RESERVED;
+  private static byte[][] RESERVED = new byte[][]{ BT_RESERVED, LT_RESERVED, AZ_RESERVED };
 
-  public static final int BT_RESERVED_MODE	= 0;
-  public static final int LT_RESERVED_MODE	= 1;
-  public static final int AZ_RESERVED_MODE	= 2;
+  /**
+   * Update reserved bytes when spoofing is activated.
+   * Called by PerfectSpoof.setActive() after client is loaded.
+   */
+  public static void updateReservedBytes() {
+    PSClient client = PerfectSpoof.getClient();
+    if (PerfectSpoof.isActive() && client != null) {
+      byte[] spoofedReserved = client.getReservedBytes();
+      if (spoofedReserved != null && spoofedReserved.length == 8) {
+        System.out.println("[BTHandshake] Updating reserved bytes to spoofed values");
+        BT_RESERVED = spoofedReserved.clone();
+        LT_RESERVED = spoofedReserved.clone();
+        AZ_RESERVED = spoofedReserved.clone();
+        RESERVED = new byte[][]{ BT_RESERVED, LT_RESERVED, AZ_RESERVED };
+      }
+    } else {
+      System.out.println("[BTHandshake] Resetting reserved bytes to defaults");
+      BT_RESERVED = DEFAULT_BT_RESERVED.clone();
+      LT_RESERVED = DEFAULT_LT_RESERVED.clone();
+      AZ_RESERVED = DEFAULT_AZ_RESERVED.clone();
+      RESERVED = new byte[][]{ BT_RESERVED, LT_RESERVED, AZ_RESERVED };
+    }
+    setFastExtensionEnabled(FAST_EXTENSION_ENABLED);
+  }
 
-  private static final byte[][] RESERVED;
+  /**
+   * Get the current AZ reserved bytes (used by PEPeerControlImpl).
+   */
+  public static byte[] getAzReserved() {
+    return AZ_RESERVED;
+  }
 
   public static void setMainlineDHTEnabled(boolean enabled) {
-	  if (!PerfectSpoof.isActive) {
-		  if (enabled) {
-			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x01);
-			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x01);
-		  }
-		  else {
-			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xFE);
-			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xFE);
-		  }
-	  }
+    if (!PerfectSpoof.isActive()) {
+      if (enabled) {
+        LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x01);
+        AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x01);
+      } else {
+        LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xFE);
+        AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xFE);
+      }
+    }
   }
 
   public static final boolean FAST_EXTENSION_ENABLED = true;
 
   public static void setFastExtensionEnabled(boolean enabled) {
-	  if (!PerfectSpoof.isActive) {
-		  if (enabled) {
-			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x04);
-			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x04);
-		  }
-		  else {
-			  LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xF3);
-			  AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xF3);
-		  }
-	  }
+    if (!PerfectSpoof.isActive()) {
+      if (enabled) {
+        LT_RESERVED[7] = (byte)(LT_RESERVED[7] | 0x04);
+        AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] | 0x04);
+      } else {
+        LT_RESERVED[7] = (byte)(LT_RESERVED[7] & 0xF3);
+        AZ_RESERVED[7] = (byte)(AZ_RESERVED[7] & 0xF3);
+      }
+    }
   }
 
-  static{
-	  BT_RESERVED = PerfectSpoof.isActive ? psClient.getReservedBytes() : new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
-	  LT_RESERVED = PerfectSpoof.isActive ? psClient.getReservedBytes() : new byte[]{0, 0, 0, 0, 0, (byte)16, 0, 0};
-	  AZ_RESERVED = PerfectSpoof.isActive ? psClient.getReservedBytes() : new byte[]{(byte)128, 0, 0, 0, 0, (byte)19, 0, 0};
-	  RESERVED = new byte[][]{ BT_RESERVED, LT_RESERVED, AZ_RESERVED };
-	  setFastExtensionEnabled( FAST_EXTENSION_ENABLED );
+  static {
+    // Initialize with defaults - will be updated when spoofing activates
+    setFastExtensionEnabled(FAST_EXTENSION_ENABLED);
   }
 
   private DirectByteBuffer buffer = null;
@@ -126,6 +150,15 @@ public class BTHandshake implements BTMessage, RawMessage {
   }
 
   private void constructBuffer() {
+    // [PEER-DEBUG] Log handshake buffer construction details
+    try {
+      StringBuilder hexPeerId = new StringBuilder();
+      for (byte b : peer_id_bytes) { hexPeerId.append(String.format("%02x", b)); }
+      String printablePeerId = new String(peer_id_bytes, 0, Math.min(8, peer_id_bytes.length)).replaceAll("[^\\x20-\\x7E]", ".");
+      System.out.println("[PEER-DEBUG] BTHandshake.constructBuffer() - PerfectSpoof.isActive=" + PerfectSpoof.isActive);
+      System.out.println("[PEER-DEBUG] BTHandshake.constructBuffer() - reserved_bytes=" + ByteFormatter.nicePrint(reserved_bytes, false));
+      System.out.println("[PEER-DEBUG] BTHandshake.constructBuffer() - peer_id (printable)=" + printablePeerId + " (hex)=" + hexPeerId.toString());
+    } catch (Exception e) { System.out.println("[PEER-DEBUG] BTHandshake.constructBuffer() - error printing debug: " + e.getMessage()); }
     buffer = DirectByteBufferPool.getBuffer( DirectByteBuffer.AL_MSG_BT_HAND, 68 );
     buffer.put( DirectByteBuffer.SS_MSG, (byte)PROTOCOL.length() );
     buffer.put( DirectByteBuffer.SS_MSG, PROTOCOL.getBytes() );

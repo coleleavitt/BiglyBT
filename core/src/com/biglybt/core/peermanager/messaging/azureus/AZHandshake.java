@@ -28,6 +28,7 @@ import com.biglybt.core.peermanager.messaging.MessageException;
 import com.biglybt.core.peermanager.messaging.MessagingUtil;
 import com.biglybt.core.util.*;
 import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 
 
@@ -124,15 +125,25 @@ public class AZHandshake implements AZMessage {
 
   public String getClient() {
     if (PerfectSpoof.isActive) {
-      return PerfectSpoof.getClient().getAzmpName();
+      PSClient spoofClient = PerfectSpoof.getClient();
+      if (spoofClient != null && spoofClient.getAzmpName() != null) {
+        System.out.println("[PEER-DEBUG] AZHandshake.getClient() - returning spoofed AZMP name=" + spoofClient.getAzmpName() + " (original=" + client + ")");
+        return spoofClient.getAzmpName();
+      }
     }
+    System.out.println("[PEER-DEBUG] AZHandshake.getClient() - returning original client=" + client);
     return client;
   }
 
   public String getClientVersion() {
     if (PerfectSpoof.isActive) {
-      return PerfectSpoof.getClient().getAzmpVersion();
+      PSClient spoofClient = PerfectSpoof.getClient();
+      if (spoofClient != null && spoofClient.getAzmpVersion() != null) {
+        System.out.println("[PEER-DEBUG] AZHandshake.getClientVersion() - returning spoofed version=" + spoofClient.getAzmpVersion() + " (original=" + client_version + ")");
+        return spoofClient.getAzmpVersion();
+      }
     }
+    System.out.println("[PEER-DEBUG] AZHandshake.getClientVersion() - returning original version=" + client_version);
     return client_version;
   }
 

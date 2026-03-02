@@ -8005,7 +8005,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 		}
 
 		public byte[] getHandshakeReservedBytes(){
-			return(BTHandshake.AZ_RESERVED);
+			return(BTHandshake.getAzReserved());
 		}
 
 		public String getClientNameFromPeerID(){

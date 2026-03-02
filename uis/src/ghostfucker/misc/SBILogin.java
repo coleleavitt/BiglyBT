@@ -1,193 +1,71 @@
 package ghostfucker.misc;
 
-import com.biglybt.core.config.COConfigurationManager;
-import com.biglybt.ui.swt.mainwindow.SWTThread;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import org.eclipse.swt.widgets.Display;
-
+/**
+ * @deprecated SB-Innovation tracker login — REMOVED.
+ * <p>
+ * This class authenticated against {@code www.sb-innovation.de/login.php} for the
+ * SB-Innovation (SBI) private tracker. It has been deprecated and gutted because:
+ * <ul>
+ *   <li>The SBI tracker endpoint returns HTTP 403 and is no longer operational (verified 2026-03-01).</li>
+ *   <li>The feature was already permanently disabled: {@code deactivateLogin} was hardcoded to {@code true},
+ *       and {@code TOTorrentChecker.fuckSeba()} re-set it to {@code true} on every startup.</li>
+ *   <li>The SSL implementation used a trust-all certificate manager (MITM vulnerability).</li>
+ *   <li>No configuration UI was ever wired for SBILoginName / SBILoginPassword / SBILoginSSL.</li>
+ *   <li>No menu integration existed.</li>
+ * </ul>
+ * <p>
+ * Static fields are retained as no-ops for binary compatibility with any code that
+ * references {@code SBILogin.loginValid} or {@code SBILogin.deactivateLogin}.
+ * <p>
+ * Config keys that can be cleaned up from {@code COConfigurationManager}:
+ * {@code SBILoginName}, {@code SBILoginPassword}, {@code SBILoginSSL}.
+ *
+ * @since Extreme Mod (deprecated 2026-03-01)
+ */
+@Deprecated
 public class SBILogin implements Runnable {
-   public static boolean loginValid = true;
-   public static boolean deactivateLogin = true;
-   public static String loginResult = "";
-   private Runnable sbiBlock;
-   private static volatile boolean busy = false;
-   private static final String SBI_URL = "www.sb-innovation.de/login.php";
-   private static final String DO_ARG = "do=vuzeCheck&";
-   private static final String NAME_ARG = "vb_login_username=";
-   private static final String PASSWORD_ARG = "vb_login_md5password=";
-   private static final char LOGIN_INVALID = '0';
-   private static final char LOGIN_VALID = '1';
-   private static final char LOGIN_BANNED = '2';
-   private static final char LOGIN_INACTIVE = '3';
-   private static final char LOGIN_FLOOD = '<';
 
+   /** Always {@code false} — login is permanently disabled. */
+   public static final boolean loginValid = false;
+
+   /** Always {@code true} — login is permanently deactivated. */
+   public static final boolean deactivateLogin = true;
+
+   /** Always empty — no login result will ever be produced. */
+   public static final String loginResult = "";
+
+   /**
+    * @deprecated No-op constructor retained for source compatibility.
+    */
+   @Deprecated
    public SBILogin(Runnable sbiBlock) {
-      this.sbiBlock = sbiBlock;
+      // no-op: SBI tracker is defunct
    }
 
+   /**
+    * No-op. SBI tracker authentication has been removed.
+    */
+   @Override
    public void run() {
-      if (!busy) {
-         busy = true;
-
-         try {
-            this.runCheck();
-         } finally {
-            busy = false;
-         }
-
-      }
+      // no-op: SBI tracker is defunct
    }
 
-   private void runCheck() {
-      loginValid = false;
-      String name = COConfigurationManager.getStringParameter("SBILoginName").replaceAll(" ", "");
-      byte[] password = COConfigurationManager.getByteParameter("SBILoginPassword");
-      if (name.length() != 0 && password.length != 0) {
-         try {
-            char result = this.performLogin(name, md5ToString(password));
-            this.checkResult(result);
-         } catch (Exception e) {
-            loginResult = "Cannot connect to Server.";
-         }
-
-         this.updateShuSection();
-      } else {
-         loginResult = "";
-      }
-   }
-
-   private char performLogin(String name, String password) throws Exception {
-      String protocol;
-      if (COConfigurationManager.getBooleanParameter("SBILoginSSL")) {
-         protocol = "https://";
-      } else {
-         protocol = "http://";
-      }
-
-      HttpURLConnection connection = (HttpURLConnection) new URL(protocol + SBI_URL).openConnection();
-      connection.setConnectTimeout(5000);
-      connection.setReadTimeout(5000);
-      if (connection instanceof HttpsURLConnection) {
-         this.trustCustomCertificates((HttpsURLConnection) connection);
-      }
-
-      connection.setInstanceFollowRedirects(false);
-      connection.setUseCaches(false);
-      connection.setDoOutput(true);
-      connection.setRequestProperty("User-Agent", "Vuze Plus Extreme Mod");
-      connection.setRequestProperty("Connection", "close");
-      String message = DO_ARG + NAME_ARG + name + "&" + PASSWORD_ARG + password;
-      OutputStreamWriter writer = null;
-      BufferedReader reader = null;
-
-      char result;
-      try {
-         writer = new OutputStreamWriter(connection.getOutputStream());
-         writer.write(message);
-         writer.flush();
-         reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-         result = (char) reader.read();
-      } finally {
-         try {
-            if (writer != null) {
-               writer.close();
-            }
-
-            if (reader != null) {
-               reader.close();
-            }
-         } catch (IOException ignored) {
-         }
-
-      }
-
-      return result;
-   }
-
-   private void trustCustomCertificates(HttpsURLConnection connection) throws Exception {
-      TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
-         public X509Certificate[] getAcceptedIssuers() {
-            return null;
-         }
-
-         public void checkClientTrusted(X509Certificate[] certs, String authType) {
-         }
-
-         public void checkServerTrusted(X509Certificate[] certs, String authType) {
-         }
-      }};
-      SSLContext sc = SSLContext.getInstance("SSL");
-      sc.init(null, trustAllCerts, new SecureRandom());
-      connection.setSSLSocketFactory(sc.getSocketFactory());
-      HostnameVerifier hostname = new HostnameVerifier() {
-         public boolean verify(String urlHostname, SSLSession session) {
-            return true;
-         }
-      };
-      connection.setHostnameVerifier(hostname);
-   }
-
-   private void checkResult(char result) {
-      switch (result) {
-         case LOGIN_INVALID:
-            loginResult = "Username and/or password is incorrect.";
-            break;
-         case LOGIN_VALID:
-            loginResult = "Login Successful.";
-            loginValid = true;
-            break;
-         case LOGIN_BANNED:
-            loginResult = "You have been banned.";
-            break;
-         case LOGIN_INACTIVE:
-            loginResult = "Your account has not been activated.";
-            break;
-         case LOGIN_FLOOD:
-            loginResult = "You have used up your login quota! Please wait 15min. before trying again.";
-            break;
-         default:
-            loginResult = "Unknown response. Please report this to SBI.";
-            break;
-      }
-
-   }
-
-   private void updateShuSection() {
-      if (this.sbiBlock != null) {
-         Display display = SWTThread.getInstance().getDisplay();
-         if (display != null && !display.isDisposed()) {
-            display.asyncExec(this.sbiBlock);
-         }
-      }
-
-   }
-
+   /**
+    * Converts raw MD5 bytes to a lowercase hex string.
+    * Retained as a utility — this is the only non-dead functionality.
+    *
+    * @deprecated Use {@code String.format("%032x", new java.math.BigInteger(1, md5))} instead.
+    */
+   @Deprecated
    public static String md5ToString(byte[] md5) {
       StringBuilder result = new StringBuilder();
-
       for (int i = 0; i < md5.length; i++) {
          String hex = Integer.toHexString(md5[i] & 0xFF);
          if (hex.length() == 1) {
             result.append("0");
          }
-
          result.append(hex);
       }
-
       return result.toString();
    }
 }

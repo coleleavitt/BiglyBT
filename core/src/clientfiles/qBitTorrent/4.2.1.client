@@ -2,7 +2,7 @@
 <client>
 	<protocol type="ltep">
 		<clientName ltep="qBittorrent/4.2.1" />
-		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x18|0x00|0x05</reservedBytes>
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x05</reservedBytes>
 	</protocol>
 	<peerId type="anum" preFix="-qB4210-" length="20" isGlobal="false">
 		<charSet>!()*-._~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ</charSet>
@@ -28,8 +28,9 @@
 			<param>&amp;redundant=0</param>
 		</query>
 		<header>
+			<!-- NOTE: qBittorrent 4.2.1 has a bug where User-Agent is NOT sent (libtorrent issue #12570) -->
+			<!-- DO NOT add User-Agent header here - it will expose the spoof! -->
 			<field>Host: {host}:{port}</field>
-			<field>User-Agent: qBittorrent/4.2.1</field>
 			<field>Accept-Encoding: gzip</field>
 			<field>Connection: close</field>
 		</header>

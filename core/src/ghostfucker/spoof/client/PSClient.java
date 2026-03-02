@@ -68,6 +68,9 @@ public class PSClient {
 	private int scrapeHostIndex;
 	private String scrapeHttpVersion;
 	private boolean scrapeShowDefaultPort;
+	
+	// Spoofed User-Agent extracted from header
+	private String spoofedUserAgent;
 
 	public void init(Client c, String message) {
 		// Protocol setup
@@ -246,18 +249,23 @@ public class PSClient {
 		this.announceHttpVersion = c.announce.protocol;
 		this.announceShowDefaultPort = c.announce.header.showDefaultPort;
 
-		// Scrape setup
-		this.isScrapeDisabled = c.scrape.isDisabled;
-		if (!this.isScrapeDisabled) {
-			this.scrapeInfoHashToLowerCase = c.scrape.infoHash.isLowerCase;
-			this.scrapeInfoHashExceptions = parseExceptions(c.scrape.infoHash.exceptions, c.scrape.infoHash.isLowerCase);
-		}
-
-		if (!this.isScrapeDisabled) {
-			this.scrapeHeader = buildHeader(c.scrape.header);
-			this.scrapeHostIndex = findHostIndex(c.scrape.header);
-			this.scrapeHttpVersion = c.scrape.protocol;
-			this.scrapeShowDefaultPort = c.scrape.header.showDefaultPort;
+		// Scrape setup - handle null scrape section gracefully
+		if (c.scrape == null) {
+			this.isScrapeDisabled = true;
+		} else {
+			this.isScrapeDisabled = c.scrape.isDisabled;
+			if (!this.isScrapeDisabled) {
+				if (c.scrape.infoHash != null) {
+					this.scrapeInfoHashToLowerCase = c.scrape.infoHash.isLowerCase;
+					this.scrapeInfoHashExceptions = parseExceptions(c.scrape.infoHash.exceptions, c.scrape.infoHash.isLowerCase);
+				}
+				if (c.scrape.header != null) {
+					this.scrapeHeader = buildHeader(c.scrape.header);
+					this.scrapeHostIndex = findHostIndex(c.scrape.header);
+					this.scrapeHttpVersion = c.scrape.protocol;
+					this.scrapeShowDefaultPort = c.scrape.header.showDefaultPort;
+				}
+			}
 		}
 
 		this.message = message;
@@ -326,12 +334,18 @@ public String getClientKey() {
 	}
 
 	public String getUserAgent() {
+		// Return the spoofed User-Agent if available, otherwise fall back to BiglyBT default
+		if (this.spoofedUserAgent != null && !this.spoofedUserAgent.isEmpty()) {
+			return this.spoofedUserAgent;
+		}
+		// Fallback for clients without explicit User-Agent in header
 		String ua = "BiglyBT/" + Constants.BIGLYBT_VERSION;
 		if (this.azmpName != null) {
 			ua += " (" + this.azmpName + "/" + this.azmpVersion + ")";
 		}
 		return ua;
 	}
+	
 	public String getSpoofedUserAgent() {
 		return getUserAgent();
 	}
@@ -756,6 +770,15 @@ public String getClientKey() {
 
 			if (s.contains("{javaVersion}")) {
 				s = replaceAll(s, "{javaVersion}", Constants.JAVA_VERSION);
+			}
+
+			// Extract User-Agent value from header field
+			if (s.toUpperCase().startsWith("USER-AGENT:")) {
+				String uaValue = s.substring(11).trim(); // Skip "User-Agent:"
+				if (this.spoofedUserAgent == null && !uaValue.isEmpty()) {
+					this.spoofedUserAgent = uaValue;
+					System.out.println("[PSClient] Extracted User-Agent from header: " + uaValue);
+				}
 			}
 
 			String[] tmp = s.split(":", 2);

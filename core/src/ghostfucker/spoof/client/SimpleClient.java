@@ -15,6 +15,9 @@ public class SimpleClient {
 	public PeerId peerId;
 
 	public boolean isForcedCid() {
+		if (peerId == null || peerId.type == null) {
+			return false;
+		}
 		return peerId.type.equalsIgnoreCase("customId");
 	}
 

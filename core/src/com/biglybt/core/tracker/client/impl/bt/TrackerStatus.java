@@ -108,7 +108,7 @@ public class TrackerStatus {
 	}
 
 	private static final AllTrackers	all_trackers = AllTrackersManager.getAllTrackers();
-	private static final PSClient psClient = PerfectSpoof.getClient();
+	// NOTE: Don't cache PSClient - use PerfectSpoof.getClient() dynamically
 
 	private byte					autoUDPscrapeEvery				= 1;
 	private int						scrapeCount;
@@ -525,9 +525,21 @@ public class TrackerStatus {
 						info_hash += ((one_of_the_hashes != null) ? '&' : first_separator)
 								+ "info_hash=";
 
-						info_hash += URLEncoder.encode(
+						String rawEncoded = URLEncoder.encode(
 								new String(hash.getBytes(), Constants.BYTE_ENCODING_CHARSET),
 								Constants.BYTE_ENCODING_CHARSET.name()).replaceAll("\\+", "%20");
+
+						if (PerfectSpoof.isActive()) {
+							PSClient ihClient = PerfectSpoof.getClient();
+							if (ihClient != null) {
+								// type=1 for scrape info_hash encoding (lowercase hex for qBittorrent)
+								info_hash += ihClient.getInfoHash(rawEncoded, (byte) 1);
+							} else {
+								info_hash += rawEncoded;
+							}
+						} else {
+							info_hash += rawEncoded;
+						}
 
 						Object[]	extensions = scraper.getExtensions(hash);
 
@@ -1321,12 +1333,12 @@ public class TrackerStatus {
 	 			http_properties.put( ClientIDGenerator.PR_SNI_HACK, true );
 	 		}
 
-			try{
-				ClientIDManagerImpl.getSingleton().generateHTTPProperties( example_hash, http_properties );
-
-			}catch( ClientIDException e ){
-
-				throw( new IOException( e.getMessage()));
+			if ( !PerfectSpoof.isActive() ) {
+				try{
+					ClientIDManagerImpl.getSingleton().generateHTTPProperties( example_hash, http_properties );
+				}catch( ClientIDException e ){
+					throw( new IOException( e.getMessage()));
+				}
 			}
 
 			reqUrl = (URL)http_properties.get( ClientIDGenerator.PR_URL );
@@ -1410,21 +1422,90 @@ public class TrackerStatus {
 				con.setInstanceFollowRedirects( true );
 
 				String	user_agent = (String)http_properties.get( ClientIDGenerator.PR_USER_AGENT );
-				
-				if ( PerfectSpoof.isActive() ) {
-					user_agent = psClient.getSpoofedUserAgent();
+
+				if (PerfectSpoof.isActive()) {
+					PSClient spoofClient = PerfectSpoof.getClient();
+					if (spoofClient != null) {
+						try {
+							// Full header spoofing from .client scrape profile (matches announce pattern)
+							String[][] profileHeaders = spoofClient.getScrapeHeader();
+							if (profileHeaders != null) {
+								for (String[] h : profileHeaders) {
+									if (h == null || h[0] == null || h[1] == null) continue;
+									String name = h[0].trim();
+									String value = h[1].trim();
+
+									// Resolve Host header placeholders
+									if (name.equalsIgnoreCase("Host")) {
+										String host = reqUrl.getHost();
+										int port = reqUrl.getPort();
+										value = value.replace("{host}", host);
+										boolean showDefaultPort = spoofClient.getScrapeShowDefaultPort();
+										if (port == -1 || (!showDefaultPort && port == reqUrl.getDefaultPort())) {
+											value = value.replace(":{port}", "");
+										} else {
+											value = value.replace("{port}", String.valueOf(port));
+										}
+									}
+
+									con.setRequestProperty(name, value);
+								}
+							} else {
+								// Fallback: at least set User-Agent from profile
+								user_agent = spoofClient.getSpoofedUserAgent();
+								if (user_agent != null) {
+									con.setRequestProperty("User-Agent", user_agent);
+								}
+								con.addRequestProperty("Accept-Encoding", "gzip");
+								con.setRequestProperty("Connection", "close");
+							}
+
+							// Remove Accept header via reflection (qBittorrent sends none)
+							con.setRequestProperty("Accept", "");
+							try {
+								java.lang.reflect.Field reqField = null;
+								Class<?> conClass = con.getClass();
+								while (conClass != null && reqField == null) {
+									try {
+										reqField = conClass.getDeclaredField("requests");
+									} catch (NoSuchFieldException nsfe) {
+										conClass = conClass.getSuperclass();
+									}
+								}
+								if (reqField != null) {
+									reqField.setAccessible(true);
+									Object msgHeader = reqField.get(con);
+									java.lang.reflect.Method removeMethod = msgHeader.getClass().getMethod("remove", String.class);
+									removeMethod.invoke(msgHeader, "Accept");
+								}
+							} catch (Exception reflEx) {
+								// Accept removal best-effort
+							}
+
+						} catch (Exception e) {
+							// Fallback on any error
+							if (user_agent != null) {
+								con.setRequestProperty("User-Agent", user_agent);
+							}
+							con.addRequestProperty("Accept-Encoding", "gzip");
+							con.setRequestProperty("Connection", "close");
+						}
+					} else {
+						// spoofClient null - use default headers
+						if (user_agent != null) {
+							con.setRequestProperty("User-Agent", user_agent);
+						}
+						con.addRequestProperty("Accept-Encoding", "gzip");
+						con.setRequestProperty("Connection", "close");
+					}
+				} else {
+					// PerfectSpoof not active - use default headers
+					if (user_agent != null) {
+						con.setRequestProperty("User-Agent", user_agent);
+					}
+					con.addRequestProperty("Accept-Encoding", "gzip");
+					con.setRequestProperty("Connection", "close");
 				}
-				
-				if ( user_agent != null ){
-				
-					con.setRequestProperty("User-Agent", user_agent );
-				}
-
-				// some trackers support gzip encoding of replies
-
-				con.addRequestProperty("Accept-Encoding","gzip");
-
-				con.setRequestProperty("Connection", "close" );
 
 				try{
 					con.connect();

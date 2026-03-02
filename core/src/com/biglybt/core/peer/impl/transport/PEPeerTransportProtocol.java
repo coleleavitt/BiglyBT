@@ -70,6 +70,7 @@ import com.biglybt.pif.peers.Peer;
 import com.biglybt.pif.peers.PeerDescriptor;
 import com.biglybt.pifimpl.local.clientid.ClientIDManagerImpl;
 import com.biglybt.pifimpl.local.network.ConnectionImpl;
+import ghostfucker.spoof.PerfectSpoof;
 
 
 public class
@@ -1375,6 +1376,11 @@ implements PEPeerTransport
 
 			BTHandshake handshake =	new BTHandshake( manager.getTargetHash(),
 					manager.getPeerId(), msg_mode, other_peer_handshake_version );
+			// [PEER-DEBUG] Log BT handshake send details
+			try {
+				String modeStr = msg_mode == BTHandshake.AZ_RESERVED_MODE ? "AZ" : (msg_mode == BTHandshake.LT_RESERVED_MODE ? "LT" : "BT");
+				System.out.println("[PEER-DEBUG] sendBTHandshake() - peer_id=" + ByteFormatter.nicePrint(manager.getPeerId(), false) + " reserved_mode=" + modeStr + " PerfectSpoof.isActive=" + PerfectSpoof.isActive);
+			} catch (Exception e) { System.out.println("[PEER-DEBUG] sendBTHandshake() - error: " + e.getMessage()); }
 
 			if (Logger.isEnabled())
 			    Logger.log(new LogEvent(this, LOGID,
@@ -1400,6 +1406,8 @@ implements PEPeerTransport
 		Map data_dict = new HashMap();
 
 		data_dict.put("v", client_name);
+		// [PEER-DEBUG] Log LT handshake v field
+		System.out.println("[PEER-DEBUG] sendLTHandshake() - v field=" + client_name + " PerfectSpoof.isActive=" + PerfectSpoof.isActive);
 		data_dict.put("p", new Integer(localTcpPort));
 		data_dict.put("e", new Long(require_crypto ? 1L : 0L));
 
@@ -1456,6 +1464,12 @@ implements PEPeerTransport
 
 		lt_handshake.addDefaultExtensionMappings( true, is_metadata_download || metainfo_size > 0, true, utp_avail && ps_enabled && !socks_active );
 
+		// [PEER-DEBUG] Log LT handshake extension mappings
+		try {
+			System.out.println("[PEER-DEBUG] sendLTHandshake() - data_dict keys=" + data_dict.keySet());
+			Map extMap = (Map)data_dict.get("m");
+			if (extMap != null) { System.out.println("[PEER-DEBUG] sendLTHandshake() - extension mappings=" + extMap); }
+		} catch (Exception e) { System.out.println("[PEER-DEBUG] sendLTHandshake() ext debug error: " + e.getMessage()); }
 		connection.getOutgoingMessageQueue().addMessage(lt_handshake, false);
 	}
 
@@ -2850,6 +2864,11 @@ implements PEPeerTransport
 		}
 
 		peer_id = handshake.getPeerId();
+		// [PEER-DEBUG] Log received BT handshake details
+		try {
+			System.out.println("[PEER-DEBUG] decodeBTHandshake() - received peer_id=" + ByteFormatter.nicePrint(peer_id, false));
+			System.out.println("[PEER-DEBUG] decodeBTHandshake() - received reserved=" + ByteFormatter.nicePrint(handshake.getReserved(), false));
+		} catch (Exception e) { System.out.println("[PEER-DEBUG] decodeBTHandshake() - error: " + e.getMessage()); }
 
 		// Decode a client identification string from the given peerID
 		this.client_peer_id = this.client = StringInterner.intern(PeerClassifier.getClientDescription( peer_id, network ));

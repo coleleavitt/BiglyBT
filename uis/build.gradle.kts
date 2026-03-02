@@ -4,6 +4,22 @@
 
 plugins {
     id("buildlogic.java-conventions")
+    application
+}
+
+application {
+    mainClass.set("com.biglybt.ui.Main")
+    applicationDefaultJvmArgs = listOf(
+        "--add-opens", "java.base/java.net=ALL-UNNAMED",
+        "--add-opens", "java.base/sun.net.www.protocol.http=ALL-UNNAMED",
+        "--add-opens", "java.base/sun.net.www.protocol.https=ALL-UNNAMED",
+        "--add-opens", "java.base/sun.net.www=ALL-UNNAMED",
+        "--add-exports", "java.base/sun.net.www=ALL-UNNAMED"
+    )
+}
+
+tasks.named<JavaExec>("run") {
+    workingDir = project.rootDir
 }
 
 dependencies {

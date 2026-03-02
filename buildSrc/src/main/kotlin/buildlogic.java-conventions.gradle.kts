@@ -23,7 +23,7 @@ val swtArtifact = when {
 }
 
 dependencies {
-    compileOnly("org.eclipse.swt:$swtArtifact:$swtVersion")
+    implementation("org.eclipse.swt:$swtArtifact:$swtVersion")
 }
 
 group = "com.biglybt"
@@ -33,7 +33,9 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 val addOpensArgs = listOf(
     "--add-opens", "java.base/java.net=ALL-UNNAMED",
     "--add-opens", "java.base/sun.net.www.protocol.http=ALL-UNNAMED",
-    "--add-opens", "java.base/sun.net.www.protocol.https=ALL-UNNAMED"
+    "--add-opens", "java.base/sun.net.www.protocol.https=ALL-UNNAMED",
+    "--add-opens", "java.base/sun.net.www=ALL-UNNAMED",
+    "--add-exports", "java.base/sun.net.www=ALL-UNNAMED"
 )
 
 tasks.withType<Test> {
@@ -66,7 +68,8 @@ sourceSets {
             srcDirs("src")
         }
         resources {
-            srcDirs("resources")
+            srcDirs("resources", "src")
+            include("**/*.properties", "**/*.png", "**/*.gif", "**/*.jpg", "**/*.html", "**/*.css", "**/*.xml", "**/*.txt", "META-INF/**")
         }
     }
     test {

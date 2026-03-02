@@ -39,19 +39,27 @@ public interface LTMessage extends Message {
 	// been disabled.
 	public static final String ID_DISABLED_EXT       = "disabled_extension";
 	public static final byte[] ID_DISABLED_EXT_BYTES = ID_DISABLED_EXT.getBytes();
-	public static final int SUBID_DISABLED_EXT       = 2;
+	public static final int SUBID_DISABLED_EXT       = 6;
 
 	public static final String ID_UT_METADATA        = "ut_metadata";
 	public static final byte[] ID_UT_METADATA_BYTES  = ID_UT_METADATA.getBytes();
-	public static final int SUBID_UT_METADATA        = 3;
+	public static final int SUBID_UT_METADATA        = 2;
 
 	public static final String ID_UT_UPLOAD_ONLY        = "upload_only";
 	public static final byte[] ID_UT_UPLOAD_ONLY_BYTES  = ID_UT_UPLOAD_ONLY.getBytes();
-	public static final int SUBID_UT_UPLOAD_ONLY        = 4;
+	public static final int SUBID_UT_UPLOAD_ONLY        = 3;
 
 	public static final String ID_UT_HOLEPUNCH			= "ut_holepunch";
 	public static final byte[] ID_UT_HOLEPUNCH_BYTES	= ID_UT_HOLEPUNCH.getBytes();
-	public static final int SUBID_UT_HOLEPUNCH			= 5;
+	public static final int SUBID_UT_HOLEPUNCH			= 4;
+
+	public static final String ID_LT_DONTHAVE			= "lt_donthave";
+	public static final byte[] ID_LT_DONTHAVE_BYTES	= ID_LT_DONTHAVE.getBytes();
+	public static final int SUBID_LT_DONTHAVE			= 7;
+
+	public static final String ID_SHARE_MODE			= "share_mode";
+	public static final byte[] ID_SHARE_MODE_BYTES		= ID_SHARE_MODE.getBytes();
+	public static final int SUBID_SHARE_MODE			= 8;
 
 	// 10 -> 20 reserved for non-public nets
 }

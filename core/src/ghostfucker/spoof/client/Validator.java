@@ -250,7 +250,8 @@ public class Validator {
 	}
 
 	private static void validateOptionalString(String str, String elementName) throws ValidationException {
-		validateOptionalString(str, elementName, str == null ? 0 : str.length());
+		// Use default maxLength of 42, not str.length() which would always fail validation
+		validateOptionalString(str, elementName, 42);
 	}
 
 	private static void validateOptionalString(String str, String elementName, int maxLength) throws ValidationException {

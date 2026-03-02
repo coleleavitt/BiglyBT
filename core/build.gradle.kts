@@ -13,3 +13,17 @@ dependencies {
 }
 
 description = "BiglyBT - Core"
+
+sourceSets {
+    main {
+        resources {
+            srcDirs("resources", "src", "../clientfiles")
+            include("**/*.properties", "**/*.png", "**/*.gif", "**/*.jpg", "**/*.html", "**/*.css", "**/*.xml", "**/*.txt", "META-INF/**")
+            exclude("../clientfiles/META-INF/**")
+        }
+    }
+}
+
+tasks.withType<Copy> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

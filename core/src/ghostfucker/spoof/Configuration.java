@@ -8,6 +8,9 @@ import ghostfucker.spoof.client.Validator;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,22 +48,34 @@ public class Configuration {
 	}
 
 	public SimpleClient getClient(String client, String version) {
+		System.out.println("[Configuration] getClient(" + client + ", " + version + ")");
 		Map<String, SimpleClient> map = this.versionClientMapping.get(client);
 		if (map != null) {
-			return map.get(version);
+			SimpleClient sc = map.get(version);
+			if (sc != null) {
+				System.out.println("[Configuration] Found client: " + client + "/" + version);
+				return sc;
+			}
+			System.out.println("[Configuration] Version not found: " + version + ", available: " + map.keySet());
+		} else {
+			System.out.println("[Configuration] Client not found: " + client + ", available: " + this.versionClientMapping.keySet());
 		}
 
-		// Return empty fallback
+		// Return safe fallback with initialized peerId
+		System.out.println("[Configuration] Returning fallback SimpleClient");
 		SimpleClient sc = new SimpleClient();
 		sc.peerId = new SimpleClient.PeerId();
 		sc.peerId.type = "";
 		sc.peerId.preFix = "";
+		sc.peerId.length = 0;
+		sc.peerId.isGlobal = true;
 		return sc;
 	}
 
 	private void readClientFiles() {
-		File dir = new File("clientfiles/");
-		if (dir.exists()) {
+		File dir = findClientFilesDir();
+		if (dir != null && dir.exists()) {
+			System.out.println("[PerfectSpoof] Found clientfiles at: " + dir.getAbsolutePath());
 			File[] clients = dir.listFiles(new FileFilter() {
 				public boolean accept(File file) {
 					return file.isDirectory();
@@ -96,7 +111,66 @@ public class Configuration {
 					this.versionClientMapping.put(client.getName(), versionClientMap);
 				}
 			}
+		} else {
+			System.out.println("[PerfectSpoof] WARNING: clientfiles directory not found in any searched location");
 		}
+	}
+
+	/**
+	 * Searches multiple locations for the clientfiles directory:
+	 * 1. Current working directory: ./clientfiles/
+	 * 2. BiglyBT user config: ~/.biglybt/clientfiles
+	 * 3. Next to the running JAR file
+	 * 4. Classpath resource
+	 */
+	private static File findClientFilesDir() {
+		// 1. Current working directory
+		File cwd = new File("clientfiles");
+		if (cwd.exists() && cwd.isDirectory()) {
+			System.out.println("[PerfectSpoof] clientfiles: found in current working directory");
+			return cwd;
+		}
+		System.out.println("[PerfectSpoof] clientfiles: not in CWD (" + new File(".").getAbsolutePath() + ")");
+
+		// 2. User home: ~/.biglybt/clientfiles
+		File userHome = new File(System.getProperty("user.home"), ".biglybt" + File.separator + "clientfiles");
+		if (userHome.exists() && userHome.isDirectory()) {
+			System.out.println("[PerfectSpoof] clientfiles: found in user home config");
+			return userHome;
+		}
+		System.out.println("[PerfectSpoof] clientfiles: not in " + userHome.getAbsolutePath());
+
+		// 3. Next to the JAR file
+		try {
+			URI jarUri = Configuration.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+			File jarDir = new File(jarUri).getParentFile();
+			if (jarDir != null) {
+				File nextToJar = new File(jarDir, "clientfiles");
+				if (nextToJar.exists() && nextToJar.isDirectory()) {
+					System.out.println("[PerfectSpoof] clientfiles: found next to JAR");
+					return nextToJar;
+				}
+				System.out.println("[PerfectSpoof] clientfiles: not next to JAR (" + jarDir.getAbsolutePath() + ")");
+			}
+		} catch (URISyntaxException | SecurityException | NullPointerException e) {
+			System.out.println("[PerfectSpoof] clientfiles: could not resolve JAR location: " + e.getMessage());
+		}
+
+		// 4. Classpath resource
+		try {
+			URL resource = Configuration.class.getClassLoader().getResource("clientfiles");
+			if (resource != null && "file".equals(resource.getProtocol())) {
+				File classpathDir = new File(resource.toURI());
+				if (classpathDir.exists() && classpathDir.isDirectory()) {
+					System.out.println("[PerfectSpoof] clientfiles: found on classpath");
+					return classpathDir;
+				}
+			}
+		} catch (URISyntaxException | SecurityException | NullPointerException e) {
+			System.out.println("[PerfectSpoof] clientfiles: could not resolve classpath resource: " + e.getMessage());
+		}
+
+		return null;
 	}
 
 	private SimpleClient readClient(File client) {
