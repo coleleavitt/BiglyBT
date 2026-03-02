@@ -40,6 +40,8 @@ import com.biglybt.core.util.Constants;
 import com.biglybt.core.util.Debug;
 import com.biglybt.core.util.RandomUtils;
 import com.biglybt.plugin.extseed.ExternalSeedException;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 public class
 ExternalSeedHTTPDownloaderRange
@@ -205,7 +207,14 @@ redirect_loop:
 						}
 
 						connection.setRequestProperty( "Connection", "Keep-Alive" );
-						connection.setRequestProperty( "User-Agent", user_agent );
+						String effective_ua = user_agent;
+						if ( PerfectSpoof.isActive() ) {
+							PSClient spoofClient = PerfectSpoof.getClient();
+							if (spoofClient != null) {
+								effective_ua = spoofClient.getSpoofedUserAgent();
+							}
+						}
+						connection.setRequestProperty( "User-Agent", effective_ua );
 
 						for (int i=0;i<prop_names.length;i++){
 

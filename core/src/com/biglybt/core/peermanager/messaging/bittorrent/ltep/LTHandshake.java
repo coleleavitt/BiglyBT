@@ -10,6 +10,8 @@ import com.biglybt.core.peermanager.messaging.Message;
 import com.biglybt.core.peermanager.messaging.MessageException;
 import com.biglybt.core.peermanager.messaging.MessagingUtil;
 import com.biglybt.core.util.*;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 /*
  * Copyright (C) Azureus Software, Inc, All Rights Reserved.
@@ -61,6 +63,23 @@ public class LTHandshake implements LTMessage {
 	@Override
 	public DirectByteBuffer[] getData() {
 		if (buffer_array == null) {
+			// [PEER-DEBUG] Log original v field before spoofing
+			String originalV = data_dict != null ? String.valueOf(data_dict.get("v")) : "null";
+			boolean wasSpoofed = false;
+			// Spoof LTEP client name when PerfectSpoof is active
+			if (PerfectSpoof.isActive && data_dict != null) {
+				PSClient psClient = PerfectSpoof.getClient();
+				if (psClient != null && psClient.getLtepName() != null) {
+					data_dict.put("v", psClient.getLtepName());
+					wasSpoofed = true;
+				}
+			}
+			try {
+				System.out.println("[PEER-DEBUG] LTHandshake.getData() - v field=" + (data_dict != null ? data_dict.get("v") : "null") + " (original=" + originalV + ", spoofed=" + wasSpoofed + ")");
+				if (data_dict != null) {
+					System.out.println("[PEER-DEBUG] LTHandshake.getData() - dict keys=" + data_dict.keySet());
+				}
+			} catch (Exception e) { System.out.println("[PEER-DEBUG] LTHandshake.getData() - error: " + e.getMessage()); }
 			buffer_array = new DirectByteBuffer[1];
 			DirectByteBuffer buffer = DirectByteBufferPool.getBuffer(DirectByteBuffer.AL_MSG_LT_HANDSHAKE, getBencodedData().length);
 			buffer_array[0] = buffer;
@@ -273,7 +292,17 @@ public class LTHandshake implements LTMessage {
 
 				ext.put( ID_UT_HOLEPUNCH, new Long( SUBID_UT_HOLEPUNCH ));
 			}
+			// When spoofing as qBittorrent, also advertise lt_donthave and share_mode
+			if ( PerfectSpoof.isActive ){
+				ext.put( ID_LT_DONTHAVE, new Long( SUBID_LT_DONTHAVE ));
+				ext.put( ID_SHARE_MODE, new Long( SUBID_SHARE_MODE ));
+			}
 		}
+			try {
+				System.out.println("[PEER-DEBUG] LTHandshake.addDefaultExtensionMappings() - pex=" + enable_pex + " md=" + enable_md + " uo=" + enable_uo + " hp=" + enable_hp);
+				Map extLog = (Map)data_dict.get("m");
+				if (extLog != null) { System.out.println("[PEER-DEBUG] LTHandshake.addDefaultExtensionMappings() - ext map=" + extLog); }
+			} catch (Exception e) { System.out.println("[PEER-DEBUG] LTHandshake.addDefaultExtensionMappings() - error: " + e.getMessage()); }
 	}
 
 	public void

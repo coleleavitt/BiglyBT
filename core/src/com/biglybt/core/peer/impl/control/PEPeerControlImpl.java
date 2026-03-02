@@ -90,6 +90,7 @@ import com.biglybt.pif.network.Connection;
 import com.biglybt.pif.network.OutgoingMessageQueue;
 import com.biglybt.pif.peers.Peer;
 import com.biglybt.pif.peers.PeerDescriptor;
+import shu.utils.ShuUtils;
 
 /**
  * manages all peer transports for a torrent
@@ -286,6 +287,26 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 	private PeerIdentityDataID _hash;
 	private final byte[] _myPeerId;
 	private PEPeerManagerStatsImpl _stats;
+
+	// Extreme Mod: fake byte tracking fields
+	private long sent = 0L;
+	private long sentPrec = 0L;
+	private long received = 0L;
+	private long receivedPrec = 0L;
+	private long remaining = 8L;
+	private long remainingPrec = 8L;
+	private long sentReal = 0L;
+	private long receivedReal = 0L;
+	private long remainingReal = 8L;
+	private long timeStartedBugFixFake;
+	private String lastFakeOption = "";
+	private boolean[] tabOption;
+	int[] tabInt;
+	float[] tabFloat;
+	boolean[] tabGeneralOption;
+	long sentNEW = 0L;
+	boolean firstRun = true;
+	private static final java.math.BigDecimal ONE_HUNDRED = new java.math.BigDecimal(100);
 
 	private final PEPeerControlHashHandler hash_handler;
 
@@ -6505,6 +6526,100 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 	}
 
 	@Override
+	public long getSentFake(){
+		return(sent);
+	}
+
+	@Override
+	public long getReceivedFake(){
+		return(received);
+	}
+
+	@Override
+	public long getRemainingFake(){
+		return(remaining);
+	}
+
+	public long getSentFakePrec(){
+		return sentPrec;
+	}
+
+	public long getReceivedFakePrec(){
+		return receivedPrec;
+	}
+
+	public long getRemainingFakePrec(){
+		return remainingPrec;
+	}
+
+	public void setRemainingFake(long remaining){
+		this.remaining = remaining;
+	}
+
+	public void dataBytesSentFake(long length){
+		if(length > 0L){
+			adapter.getDownload_manager().getStats().dataBytesSentFake(length);
+		}
+	}
+
+	public void dataBytesReceivedFake(long length){
+		if(length > 0L){
+			adapter.getDownload_manager().getStats().dataBytesReceivedFake(length);
+		}
+	}
+
+	public long getElapsedTimeFake(){
+		return (SystemTime.getCurrentTime() - timeStartedBugFixFake) / 1000L;
+	}
+
+	/**
+	 * @deprecated Use {@link ShuUtils#randomFloatBetween(float, float)} instead
+	 */
+	@Deprecated
+	public static float unEntierAuHasardEntre(float min, float max){
+		return ShuUtils.randomFloatBetween(min, max);
+	}
+
+	private void downloadManipulation(){
+		int downloadReducValue = tabInt[0];
+		long fileSize = getDiskManager().getTotalLength();
+		long completedAmount = fileSize - getDiskManager().getRemaining();
+		received = receivedReal * (long)downloadReducValue / 100L;
+		remaining = fileSize - completedAmount * (long)downloadReducValue / 100L;
+		if(received > fileSize){
+			received = fileSize;
+		}
+		if(remaining < 0L){
+			remaining = 0L;
+		}
+	}
+
+	private void checkNumberOfPeersAndTotalSent(String currentFakeOption, boolean finishing){
+		int fakePeerValue = tabInt[1];
+		int peerSeedRatioValue = tabInt[2];
+		if((firstRun || lastFakeOption.equals(currentFakeOption)) && !finishing){
+			int peers;
+			if(tabGeneralOption[10] && adapter.getDownload_manager().getTrackerScrapeResponse().getPeers() != -1){
+				peers = adapter.getDownload_manager().getTrackerScrapeResponse().getPeers();
+			}else{
+				peers = getNbPeers() - peer_database.getDiscoveredPeerCount();
+			}
+			if(sent < sentPrec || peers < fakePeerValue){
+				sent = sentPrec;
+				return;
+			}
+			if(getNbSeeds() > 0){
+				int var = (int)((double)peers / (double)getNbSeeds() * 100.0);
+				if(var < peerSeedRatioValue){
+					sent = sentPrec;
+				}
+			}
+		}
+		lastFakeOption = currentFakeOption;
+		firstRun = false;
+	}
+
+	@Override
 	public int[] getMaxConnections(){
 		return(adapter.getMaxConnections());
 	}
@@ -6889,6 +7004,328 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 	@Override
 	public PEPeerControlHashHandler getHashHandler(){
 		return(hash_handler);
+	}
+
+	/**
+	 * Extreme Mod: Core fake byte generation engine.
+	 * Reads option arrays from download manager and computes fake sent/received/remaining
+	 * values based on multipliers, ratios, and speed modes.
+	 */
+	public void refreshSystem(boolean end){
+		tabOption = adapter.getDownload_manager().getFakeOption();
+		tabInt = adapter.getDownload_manager().getFakeIntValue();
+		tabFloat = adapter.getDownload_manager().getFakeFloatValue();
+		tabGeneralOption = adapter.getDownload_manager().getGeneralOption();
+		if(tabGeneralOption[6]){
+			Logger.log(new LogEvent(disk_mgr.getTorrent(), LogIDs.PLUGIN, "Start: -> ending flag:" + end));
+		}
+
+		long lastSentReal = sentReal;
+		long lastReceivedReal = receivedReal;
+		sentReal = getStats().getTotalDataBytesSent();
+		long verified = getStats().getTotalDataBytesReceived() - (getStats().getTotalDiscarded() + getStats().getTotalHashFailBytes());
+		receivedReal = verified >= 0L ? verified : 0L;
+		remainingReal = getRemaining();
+		boolean ratioTool = tabOption[31];
+		boolean fakeOffFakeAddedToReal = tabOption[0];
+		boolean enableFake = tabOption[1];
+		if(!ratioTool){
+			adapter.getDownload_manager().getDiskManagerFileInfoSet().ratioToolRecoverFileStates();
+		}
+
+		if(ratioTool){
+			// Ratio Tool mode - independent upload/download generation
+			adapter.getDownload_manager().getDiskManagerFileInfoSet().ratioToolSetComplete();
+			if(!tabOption[31]){
+				adapter.getDownload_manager().setForceStart(true);
+			}
+			long fileSize = getDiskManager().getTotalLength();
+			long totalSentFake = adapter.getDownload_manager().getStats().getTotalDataBytesSentFake();
+			long totalReceivedFake = adapter.getDownload_manager().getStats().getTotalDataBytesReceivedFake();
+			sentPrec = sent;
+			receivedPrec = received;
+			long doneAdjustment = (new java.math.BigDecimal(fileSize)).multiply(new java.math.BigDecimal((double)tabFloat[18])).divide(ONE_HUNDRED).longValue();
+			remaining = fileSize - totalReceivedFake - doneAdjustment;
+			if(remaining < 0L){
+				remaining = 0L;
+			}
+
+			boolean stopUpload = tabOption[35];
+			long stopUploadValue = -1L;
+			if(stopUpload){
+				stopUploadValue = (long)(tabFloat[19] * 1024.0F * 1024.0F);
+				stopUpload = stopUploadValue <= totalSentFake;
+			}
+			boolean stopDownload = tabOption[36];
+			long stopDownloadValue = -1L;
+			if(stopDownload){
+				stopDownloadValue = (long)(tabFloat[20] * 1024.0F * 1024.0F);
+				stopDownload = stopDownloadValue <= totalReceivedFake;
+			}
+
+			boolean stopPeers = tabOption[37];
+			if(stopPeers){
+				int peers = getNbPeers();
+				if(peers == 0){
+					TRTrackerScraperResponse scrape = adapter.getDownload_manager().getTrackerScrapeResponse();
+					if(scrape != null){
+						peers = scrape.getPeers();
+					}
+				}
+				stopPeers = tabInt[4] > peers;
+			}
+
+			boolean startSlow = tabOption[39];
+			if(startSlow){
+				startSlow = (long)((float)fileSize - (float)fileSize * tabFloat[21] / 100.0F) <= remaining;
+			}
+
+			// Generate fake upload bytes
+			if(tabOption[33] && !stopUpload && !startSlow && !stopPeers){
+				long snt = (long)(ShuUtils.randomFloatBetween(tabFloat[14], tabFloat[15]) * ShuUtils.BYTES_PER_KILOBYTE);
+				long totalSnt = snt + totalSentFake;
+				if(tabOption[38]){
+					snt = (long)((double)snt * ((double)totalReceivedFake / (double)fileSize));
+				}
+				if(tabOption[35] && totalSnt > stopUploadValue){
+					snt -= totalSnt - stopUploadValue;
+				}
+				sent += snt;
+			}
+
+			// Generate fake download bytes
+			if(tabOption[34] && remaining > 0L && !stopDownload){
+				long rcv = (long)(ShuUtils.randomFloatBetween(tabFloat[16], tabFloat[17]) * ShuUtils.BYTES_PER_KILOBYTE);
+				long totalRcv = rcv + totalReceivedFake + doneAdjustment;
+				if(totalRcv > fileSize){
+					rcv -= totalRcv - fileSize;
+				}
+				if(tabOption[36] && totalRcv > stopDownloadValue){
+					rcv -= totalRcv - stopDownloadValue;
+				}
+				received += rcv;
+			}
+
+			if(remaining == 0L && !tabOption[42] && tabFloat[18] != 100.0F){
+				tabOption[41] = true;
+				tabOption[42] = true;
+				checkFinished(false);
+			}
+
+			dataBytesSentFake(sent - sentPrec);
+			dataBytesReceivedFake(received - receivedPrec);
+		}else if(enableFake){
+			// Standard fake modes
+			boolean downloadReduc = tabOption[2];
+			boolean downloadReducAlone = tabOption[3];
+			boolean downloadReducMix = tabOption[4];
+			boolean noReport = tabOption[5];
+			boolean fakeUploadRatio = tabOption[8];
+			boolean fakeUploadSpeedRatio = tabOption[10];
+			boolean fakeUploadMultiplier = tabOption[11];
+			boolean fakeSeeding = tabOption[12];
+			boolean ghostLeech = tabOption[25];
+			sentPrec = sent;
+			receivedPrec = received;
+			remainingPrec = remaining;
+
+			if((!downloadReduc || !downloadReducAlone) && (!downloadReducMix || noReport || fakeUploadRatio || fakeUploadMultiplier || fakeSeeding || fakeUploadSpeedRatio || ghostLeech)){
+				if(noReport){
+					// NoReport mode (tabOption[5]) - report zero bytes
+					boolean noReportSeed = tabOption[6];
+					boolean noReportCustom = tabOption[23];
+					boolean noReportAuto = tabOption[24];
+					sentPrec = 0L;
+					sent = 0L;
+					received = 0L;
+					if(noReportSeed){
+						remaining = 0L;
+						lastFakeOption = "No ReportSeed";
+					}else if(noReportCustom){
+						float customDone = tabFloat[13];
+						float fileSize = (float)getDiskManager().getTotalLength();
+						remaining = (long)(fileSize - fileSize * customDone / 100.0F);
+						lastFakeOption = "No ReportCustom";
+					}else if(noReportAuto){
+						remaining = remainingReal;
+						lastFakeOption = "No ReportAuto";
+					}else{
+						long fileSize = getDiskManager().getTotalLength();
+						remaining = fileSize;
+						lastFakeOption = "No ReportLeech";
+					}
+				}else if(ghostLeech){
+					boolean ghostLeechReport = tabOption[28] && !tabOption[29];
+					if(ghostLeechReport){
+						sent = sentReal;
+						received = receivedReal;
+						remaining = remainingReal;
+						lastFakeOption = "ghostLeechReport";
+					}else{
+						sentPrec = 0L;
+						sent = 0L;
+						received = 0L;
+						remaining = getDiskManager().getTotalLength();
+						lastFakeOption = "ghostLeechNoReport";
+					}
+				}else if(fakeUploadRatio){
+					// FakeUploadRatio (tabOption[8]) - ratio-based fake upload
+					float fakeUploadRatioValue = tabFloat[0];
+					float fakeUploadRatioValueMax = tabFloat[1];
+					float value = ShuUtils.randomFloatBetween(fakeUploadRatioValue, fakeUploadRatioValueMax);
+					boolean fakeUploadRMContinue = tabOption[9];
+					boolean fakeUpRMIntelligent = tabOption[18];
+					long fileSize = getDiskManager().getTotalLength();
+					String strTemp = "";
+					if(downloadReduc && downloadReducMix){
+						downloadManipulation();
+						strTemp = "Fake Upload Ratio Mode + Download Reduction Mix";
+					}else{
+						received = receivedReal;
+						remaining = remainingReal;
+						strTemp = "Fake Upload Ratio Mode";
+					}
+
+					double pourcent = 1.0;
+					long totalFakeReceived = adapter.getDownload_manager().getStats().getTotalDataBytesReceivedFake();
+					if(fakeUpRMIntelligent){
+						pourcent = (double)totalFakeReceived / (double)fileSize;
+						if(pourcent <= 0.0){
+							pourcent = 1.0;
+						}
+					}
+
+					sent += (long)((double)((float)(received - receivedPrec) * value) * pourcent);
+					if(received > 0L){
+						double fakeRatioCourant = (double)adapter.getDownload_manager().getStats().getShareRatioFake() / 1000.0;
+						if(fakeUpRMIntelligent){
+							value = (float)((double)value * pourcent);
+						}
+						if(fakeRatioCourant < (double)value){
+							double correctionRatio = (double)value - fakeRatioCourant;
+							long correction = (long)(correctionRatio * (double)totalFakeReceived);
+							sent += correction;
+						}
+					}
+
+					if(fakeUploadRMContinue && _timeStartedSeeding != -1L){
+						sent += sentReal - lastSentReal;
+					}
+
+					checkNumberOfPeersAndTotalSent(strTemp, end);
+				}else if(!fakeUploadSpeedRatio){
+					if(fakeUploadMultiplier){
+						// FakeUploadMultiplier (tabOption[11]) - multiply real bytes by random factor
+						boolean showAsSeed = tabOption[12];
+						float fakeUploadMultiplierValue = tabFloat[6];
+						float fakeUploadMultiplierValueMax = tabFloat[7];
+						float value = ShuUtils.randomFloatBetween(fakeUploadMultiplierValue, fakeUploadMultiplierValueMax);
+						sent += (long)((float)(sentReal - lastSentReal) * value);
+						if(showAsSeed){
+							checkNumberOfPeersAndTotalSent("Fake Upload upload Multiplier + Show As Seed", end);
+							received = 0L;
+							remaining = 0L;
+						}else if(downloadReduc && downloadReducMix){
+							checkNumberOfPeersAndTotalSent("Fake Upload upload Multiplier + Download Reduc Mix", end);
+							downloadManipulation();
+						}else{
+							checkNumberOfPeersAndTotalSent("Fake Upload upload Multiplier", end);
+							received = receivedReal;
+							remaining = remainingReal;
+						}
+					}else{
+						sent = sentReal;
+						received = receivedReal;
+						remaining = remainingReal;
+						lastFakeOption = "None (When enable system is activated and no fake ON)";
+					}
+				}else{
+					// FakeUploadSpeedRatio (tabOption[10]) - speed-based fake upload
+					float fakeUploadSpeedRatioRValue = tabFloat[2];
+					float fakeUploadSpeedRatioRValueMax = tabFloat[3];
+					float sValue = 0.0F;
+					long fileSize = getDiskManager().getTotalLength();
+					boolean swarmSpeed = tabOption[19];
+					float swarmSpeedValue = (float)adapter.getDownload_manager().getStats().getTotalAveragePerPeer() / 1000.0F;
+					boolean isRatio = tabOption[16];
+					double rValue = (double)ShuUtils.randomFloatBetween(fakeUploadSpeedRatioRValue, fakeUploadSpeedRatioRValueMax);
+					long fakeSent = 0L;
+					float pourcentRealDone = (float)adapter.getDownload_manager().getStats().getDownloadCompleted(false) / 10.0F;
+					boolean startFakePourcentReached = tabOption[22];
+					float pourcentValue = tabFloat[9];
+					boolean showAsSeed = tabOption[12];
+					boolean stopIfSwarmDrops = tabOption[30];
+					if((!startFakePourcentReached || !(pourcentValue >= pourcentRealDone)) && (!stopIfSwarmDrops || !(swarmSpeedValue <= 1.0F))){
+						if(receivedReal <= 0L && _timeStartedSeeding == -1L){
+							sent = 0L;
+						}else{
+							boolean fakeUpSRIntelligent = tabOption[21];
+							double pourcent = 1.0;
+							long totalFakeReceived = adapter.getDownload_manager().getStats().getTotalDataBytesReceivedFake();
+							if(fakeUpSRIntelligent){
+								pourcent = (double)totalFakeReceived / (double)fileSize;
+								if(pourcent <= 0.0){
+									pourcent = 1.0;
+								}
+							}
+
+							boolean fakeUploadAdd = tabOption[17];
+							if(fakeUploadAdd){
+								fakeSent += sentReal - lastSentReal;
+							}
+
+							double fakeRatioCourant = (double)adapter.getDownload_manager().getStats().getShareRatioFake() / 1000.0;
+							float fakeUploadSpeedRatioSValue;
+							float fakeUploadSpeedRatioSValueMax;
+							if(isRatio && (!isRatio || !(fakeRatioCourant <= rValue))){
+								fakeUploadSpeedRatioSValue = tabFloat[11];
+								fakeUploadSpeedRatioSValueMax = tabFloat[12];
+							}else{
+								fakeUploadSpeedRatioSValue = tabFloat[4];
+								fakeUploadSpeedRatioSValueMax = tabFloat[5];
+							}
+
+							sValue = swarmSpeed ? (swarmSpeedValue <= fakeUploadSpeedRatioSValueMax ? swarmSpeedValue : fakeUploadSpeedRatioSValueMax) : ShuUtils.randomFloatBetween(fakeUploadSpeedRatioSValue, fakeUploadSpeedRatioSValueMax);
+							fakeSent += (long)((double)(1024.0F * sValue) * pourcent);
+							sent += fakeSent;
+						}
+					}else{
+						sent += sentReal - lastSentReal;
+					}
+
+					if(downloadReduc && downloadReducMix){
+						checkNumberOfPeersAndTotalSent("Fake Upload Speed Mode++ + Download ReducMix", end);
+						downloadManipulation();
+					}else if(showAsSeed){
+						checkNumberOfPeersAndTotalSent("Fake Upload Speed Mode++ + Show As Seed", end);
+						received = 0L;
+						remaining = 0L;
+					}else{
+						checkNumberOfPeersAndTotalSent("Fake Upload Speed Mode++", end);
+						received = receivedReal;
+						remaining = remainingReal;
+					}
+				}
+			}else{
+				// Download Reduction Alone mode
+				sent = sentReal;
+				downloadManipulation();
+				lastFakeOption = "Download Reduction Alone";
+			}
+
+			dataBytesSentFake(sent - sentPrec);
+		}else if(fakeOffFakeAddedToReal && !enableFake){
+			sent = sentReal + sentPrec;
+			received = receivedReal;
+			remaining = remainingReal;
+			lastFakeOption = "FakeOff FakePast+Real";
+			dataBytesSentFake(sent - sentPrec);
+		}else{
+			sent = sentReal;
+			received = receivedReal;
+			remaining = remainingReal;
+			lastFakeOption = "None";
+		}
 	}
 
 	@Override
@@ -7571,7 +8008,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 		}
 
 		public byte[] getHandshakeReservedBytes(){
-			return(BTHandshake.AZ_RESERVED);
+			return(BTHandshake.getAzReserved());
 		}
 
 		public String getClientNameFromPeerID(){
@@ -7735,6 +8172,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 		public long getTotalBytesDownloadedByPeer(){
 			return(_stats.getTotalDataBytesReceived() + _stats.getTotalProtocolBytesReceived());
 		}
+
 
 		public void diskReadComplete(long bytes){
 		}

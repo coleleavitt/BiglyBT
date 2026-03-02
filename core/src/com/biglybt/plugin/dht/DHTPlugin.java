@@ -67,6 +67,7 @@ import com.biglybt.plugin.dht.impl.DHTPluginImpl;
 import com.biglybt.plugin.dht.impl.DHTPluginImplAdapter;
 import com.biglybt.plugin.upnp.UPnPMapping;
 import com.biglybt.plugin.upnp.UPnPPlugin;
+import ghostfucker.spoof.PerfectSpoof;
 
 /**
  * @author parg
@@ -780,6 +781,22 @@ DHTPlugin
 		if (!enabled_param.getValue()){
 
 			model.getStatus().setText( "Disabled" );
+
+			status	= STATUS_DISABLED;
+
+			init_sem.releaseForever();
+
+			return;
+		}
+
+		// GhostFucker: Disable DHT when PerfectSpoof is active to prevent node_id leaking real IP:port
+		boolean disableDhtWhenSpoofing = COConfigurationManager.getBooleanParameter( "dht.disable.when.spoofing", true );
+
+		if ( disableDhtWhenSpoofing && PerfectSpoof.isActive ){
+
+			log.log( "DHT disabled: PerfectSpoof is active - DHT node_id would leak real identity" );
+
+			model.getStatus().setText( "Disabled (PerfectSpoof active)" );
 
 			status	= STATUS_DISABLED;
 

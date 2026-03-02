@@ -41,6 +41,8 @@ import com.biglybt.pifimpl.local.PluginCoreUtils;
 import com.biglybt.plugin.extseed.*;
 import com.biglybt.plugin.extseed.util.ExternalSeedHTTPDownloaderListener;
 
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 public abstract class
 ExternalSeedReaderImpl
 	implements ExternalSeedReader, PeerManagerListener2
@@ -231,6 +233,12 @@ ExternalSeedReaderImpl
 	protected String
 	getUserAgent()
 	{
+		if ( PerfectSpoof.isActive() ) {
+			PSClient spoofClient = PerfectSpoof.getClient();
+			if (spoofClient != null) {
+				return spoofClient.getSpoofedUserAgent();
+			}
+		}
 		return( user_agent );
 	}
 	protected long

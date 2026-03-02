@@ -23,6 +23,7 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
+import java.lang.ref.Cleaner;
 
 import com.biglybt.core.logging.LogAlert;
 import com.biglybt.core.logging.Logger;
@@ -53,6 +54,8 @@ public final class CocoaJavaBridge extends NativeInvocationBridge
 
     private static final String DEL_SCRIPT_FORMAT = "tell application \"Finder\" to move (posix file \"{0}\" as alias) to the trash";
 
+    private static final Cleaner CLEANER = Cleaner.create();
+    private final Cleaner.Cleanable cleanable;
     /**
      * Main NSAutoreleasePool
      */
@@ -62,6 +65,8 @@ public final class CocoaJavaBridge extends NativeInvocationBridge
     private AEMonitor scriptMon = new AEMonitor("CocoaJavaBridge:S");
 
     protected boolean isDisposed = false;
+
+    private CleanupState cleanupState;
 
     protected RunnableDispatcher scriptDispatcher;
 
@@ -108,6 +113,10 @@ public final class CocoaJavaBridge extends NativeInvocationBridge
 
             //mainPool = NSAutoreleasePool.push();
             mainPool = NSAutoreleasePool_push();
+
+            // Register cleanup with Cleaner (replaces finalize())
+            cleanupState = new CleanupState(mainPool, methPop, classMon);
+            cleanable = CLEANER.register(this, cleanupState);
 
             scriptDispatcher = new RunnableDispatcher();
         }
@@ -431,11 +440,16 @@ public final class CocoaJavaBridge extends NativeInvocationBridge
             if(!isDisposed)
             {
                 Debug.outNoStack("Disposing Native PlatformManager...");
+                // Mark cleanup state as disposed to prevent Cleaner from running
+                cleanupState.markDisposed();
                 try {
-									NSAutoreleasePool_pop(mainPool);
-								} catch (Throwable e) {
-								}
+                    NSAutoreleasePool_pop(mainPool);
+                } catch (Throwable e) {
+                    // Ignore cleanup errors
+                }
                 isDisposed = true;
+                // Cancel the Cleaner registration since we've cleaned up manually
+                cleanable.clean();
                 Debug.outNoStack("Done");
             }
         }
@@ -446,13 +460,43 @@ public final class CocoaJavaBridge extends NativeInvocationBridge
     }
 
     /**
-     * {@inheritDoc}
+     * Cleanup state for the Cleaner - must not hold reference to CocoaJavaBridge instance.
+     * Captures the mainPool value and methPop reference needed to release native resources.
      */
-    @Override
-    protected void finalize() throws Throwable
-    {
-        dispose();
-        super.finalize();
+    private static class CleanupState implements Runnable {
+        private final int mainPool;
+        private final Method methPop;
+        private final AEMonitor classMon;
+        private volatile boolean disposed = false;
+
+        CleanupState(int mainPool, Method methPop, AEMonitor classMon) {
+            this.mainPool = mainPool;
+            this.methPop = methPop;
+            this.classMon = classMon;
+        }
+
+        @Override
+        public void run() {
+            try {
+                classMon.enter();
+                if (!disposed) {
+                    Debug.outNoStack("Disposing Native PlatformManager via Cleaner...");
+                    try {
+                        methPop.invoke(null, mainPool);
+                    } catch (Throwable e) {
+                        // Ignore cleanup errors
+                    }
+                    disposed = true;
+                    Debug.outNoStack("Done");
+                }
+            } finally {
+                classMon.exit();
+            }
+        }
+
+        void markDisposed() {
+            disposed = true;
+        }
     }
 
     /**

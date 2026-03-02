@@ -193,6 +193,10 @@ PRUDPPacketRequestAnnounce
 		throws IOException
 	{
 		super.serialise(os);
+		// [PEER-DEBUG] Log UDP tracker announce v1 serialization
+		try {
+			System.out.println("[PEER-DEBUG] PRUDPPacketRequestAnnounce.serialise() - peer_id=" + ByteFormatter.nicePrint(peer_id, true));
+		} catch (Exception e) { System.out.println("[PEER-DEBUG] PRUDPPacketRequestAnnounce.serialise() - error: " + e.getMessage()); }
 
 		os.write( hash );
 		os.write( peer_id );

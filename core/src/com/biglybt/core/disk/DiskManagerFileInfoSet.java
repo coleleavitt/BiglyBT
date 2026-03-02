@@ -66,4 +66,9 @@ DiskManagerFileInfoSet
 	public DiskManagerFileInfo[] getFiles();
 	
 	public int nbFiles();
+
+	// Extreme Mod: ratio tool file state management
+	public default void ratioToolRecoverFileStates(){}
+	public default void ratioToolSetComplete(){}
+
 }

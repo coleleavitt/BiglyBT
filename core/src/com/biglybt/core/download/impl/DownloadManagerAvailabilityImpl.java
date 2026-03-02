@@ -226,6 +226,22 @@ DownloadManagerAvailabilityImpl
 			    				String[]	allowed_sources )
 			    			{
 			    			}
+
+			    		@Override
+			    		public boolean
+			    		getFakeOption(
+			    			int		optionNumber )
+			    		{
+			    			return( false );
+			    		}
+
+			    		@Override
+			    		public boolean
+			    		getGeneralOption(
+			    			int		optionNumber )
+			    		{
+			    			return( false );
+			    		}
 			    		});
 
 				tracker_client.update( true );

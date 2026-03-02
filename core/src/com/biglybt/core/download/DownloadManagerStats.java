@@ -287,6 +287,8 @@ DownloadManagerStats
 	restoreSessionTotals(
 		long		_saved_data_bytes_downloaded,
 		long		_saved_data_bytes_uploaded,
+		long		_saved_data_bytes_downloaded_fake,
+		long		_saved_data_bytes_uploaded_fake,
 		long		_saved_discarded,
 		long		_saved_hashfails,
 		long		_saved_SecondsDownloading,
@@ -299,4 +301,14 @@ DownloadManagerStats
 	public int getPercentDoneExcludingDND();
 
 	public int[] getFilePriorityStats();
+
+	// Fake stats methods for extreme mod
+	public void dataBytesSentFake(long length);
+	public void dataBytesReceivedFake(long length);
+	public long getTotalDataBytesSentFake();
+	public long getTotalDataBytesReceivedFake();
+	public int getShareRatioFake();
+	public long getDataSendRateFake();
+	public long getDataReceivedRateFake();
+	public int getCompletedFake();
 }

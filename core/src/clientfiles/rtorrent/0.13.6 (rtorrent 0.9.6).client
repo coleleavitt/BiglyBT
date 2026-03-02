@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+		<!-- rtorrent uses libtorrent (rakshasa) as backend -->
+		<clientName ltep="rtorrent 0.9.6 (libtorrent 0.13.6)" />
+		<!-- Reserved bytes: all zeros - extensions negotiated via BEP 10 -->
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x00</reservedBytes>
+	</protocol>
+	<!-- libtorrent peer_id: -lt0D06- where 0D=13 (hex), 06=6 (hex) for version 0.13.6 -->
+	<peerId type="anum" preFix="-lt0D06-" length="20" isGlobal="true">
+		<charSet>0123456789abcdefghijklmnopqrstuvwxyz</charSet>
+	</peerId>
+	<key type="anum" length="8" isGlobal="false">
+		<charSet>0123456789abcdefghijklmnopqrstuvwxyz</charSet>
+	</key>
+	<announce>
+		<infoHash isLowerCase="true" exceptions="!()*-._~" />
+		<query staticNumwant="200">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[numwant]</param>
+			<param>[compact]</param>
+			<param>{event}</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<field>User-Agent: rtorrent/0.9.6/0.13.6</field>
+			<field>Accept: */*</field>
+			<field>Accept-Encoding: identity</field>
+		</header>
+	</announce>
+</client>

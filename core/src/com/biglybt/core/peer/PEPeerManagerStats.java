@@ -78,4 +78,12 @@ PEPeerManagerStats
 
 	public long getPermittedBytesToSend();
 	public void	permittedSendBytesUsed(	int bytes );
+
+	// Fake stats methods for extreme mod
+	public void dataBytesSentFake(long length);
+	public void dataBytesReceivedFake(long length);
+	public long getTotalDataBytesSentFake();
+	public long getTotalDataBytesReceivedFake();
+	public long getDataSendRateFake();
+	public long getDataReceivedRateFake();
 }

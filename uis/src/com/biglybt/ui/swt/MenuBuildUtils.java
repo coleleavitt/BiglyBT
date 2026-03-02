@@ -133,7 +133,7 @@ public class MenuBuildUtils {
 						if (bShown || menu.isDisposed()) {
 							return;
 						}
-						Utils.disposeSWTObjects(menu.getItems());
+						Utils.disposeSWTObjects((Object[])menu.getItems());
 
 						if (Constants.isLinux) { // Hack for Ubuntu Unity -- Show not called when no items
 							new org.eclipse.swt.widgets.MenuItem(menu, SWT.SEPARATOR);
@@ -144,7 +144,7 @@ public class MenuBuildUtils {
 
 			@Override
 			public void menuShown(MenuEvent e) {
-				Utils.disposeSWTObjects(menu.getItems());
+				Utils.disposeSWTObjects((Object[])menu.getItems());
 
 				bShown = true;
 				builder.buildMenu(menu, e);

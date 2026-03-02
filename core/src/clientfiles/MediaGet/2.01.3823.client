@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+	<!-- Current values for MediaGet 2.01.3823 Windows port as of January 29th, 2020 -->
+		<clientName ltep="MediaGet2 2.01.3823" />
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x05</reservedBytes>
+	</protocol>
+	<peerId type="anum" preFix="-MG21%260-" length="20" isGlobal="true">
+		<charSet>!()%*-._~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ</charSet>
+	</peerId>
+	<key type="anum" length="8" isGlobal="false">
+	    <charSet>0123456789ABCDEF</charSet>
+	</key>
+	<announce>
+		<infoHash isLowerCase="true" exceptions="!()*-._~" />
+		<query staticNumwant="200">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[corrupt]</param>
+			<param>[key]</param>
+			<param>{event}</param>
+			<param>[numwant]</param>
+			<param>[compact]</param>
+			<param>[no_peer_id]</param>
+			<param>&amp;supportcrypto=1</param>
+			<param>&amp;redundant=0</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<!-- Equivalent to real Zona's headers which is set in the client. Windows 10 -only? See http://www.sb-innovation.de/showthread.php?p=357395 -->
+			<field>User-Agent: MediaGet2 2.01.3823</field>
+			<field>Connection: close</field>
+			<!-- Equivalent to real Zona's headers which is set in the client. Windows 10 -only? See http://www.sb-innovation.de/showthread.php?p=357395 -->
+			<field>Accept-Encoding: gzip, deflate</field>
+		</header>
+	</announce>
+</client>
+
+

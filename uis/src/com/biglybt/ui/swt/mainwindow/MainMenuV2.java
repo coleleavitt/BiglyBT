@@ -197,7 +197,7 @@ public class MainMenuV2
 			viewMenu.addListener(SWT.Show, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
-					Utils.disposeSWTObjects(viewMenu.getItems());
+					Utils.disposeSWTObjects((Object[])viewMenu.getItems());
 					buildSimpleViewMenu(viewMenu);
 				}
 			});

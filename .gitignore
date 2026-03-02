@@ -185,3 +185,9 @@ Bigly*.jar
 */plugins/azupdater/plugin.properties
 /*.ddl
 /libOSXAccess.jnilib
+
+# Gradle
+.gradle/
+build/
+**/build/
+

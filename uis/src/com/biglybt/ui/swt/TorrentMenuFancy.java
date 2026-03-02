@@ -737,7 +737,7 @@ public class TorrentMenuFancy
 		header.composite.setBackground(Colors.getSystemColor(d, SWT.COLOR_WIDGET_BACKGROUND));
 		header.composite.setForeground(Colors.getSystemColor(d, SWT.COLOR_WIDGET_FOREGROUND));
 
-		Utils.disposeSWTObjects(detailArea.getChildren());
+		Utils.disposeSWTObjects((Object[])detailArea.getChildren());
 		listRowInfos.clear();
 		currentRowInfo = null;
 
@@ -2033,7 +2033,7 @@ public class TorrentMenuFancy
 				new FancyMenuRowInfoListener() {
 					@Override
 					public void buildMenu(Menu menu) {
-						Utils.disposeSWTObjects(menu.getItems());
+						Utils.disposeSWTObjects((Object[])menu.getItems());
 						TagUIUtils.addLibraryViewTagsSubMenu(dms, menu);
 					}
 				});

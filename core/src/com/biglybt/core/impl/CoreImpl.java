@@ -126,6 +126,8 @@ import com.biglybt.plugin.upnp.UPnPPlugin;
 import com.biglybt.ui.UIFunctions;
 import com.biglybt.ui.UIFunctionsManager;
 import com.biglybt.util.MapUtils;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.http.SpoofingURLStreamHandlerFactory;
 
 /**
  * @author parg
@@ -257,6 +259,22 @@ CoreImpl
 			}
 	
 			COConfigurationManager.initialise();
+			PerfectSpoof.initialize();
+
+			// Install HTTP interception layer for header spoofing.
+			// Must be done BEFORE any HTTP connections are made.
+			// URL.setURLStreamHandlerFactory() can only be called once per JVM.
+			if (PerfectSpoof.isActive()) {
+				boolean httpInstalled = SpoofingURLStreamHandlerFactory.install();
+				if (httpInstalled) {
+					Logger.log(new LogEvent(LOGID, "GhostFucker HTTP interception layer installed"));
+				} else {
+					Logger.log(new LogEvent(LOGID, LogEvent.LT_WARNING,
+						"GhostFucker HTTP interception layer failed to install - header spoofing unavailable"));
+				}
+			} else {
+				Logger.log(new LogEvent(LOGID, "PerfectSpoof not active - HTTP interception layer skipped"));
+			}
 	
 			if (DEBUG_STARTUPTIME) {
 				logTime("ConfigMan.init");
@@ -976,6 +994,8 @@ CoreImpl
 			}
 
 			started	= true;
+
+		PerfectSpoof.initialize();
 
 		}finally{
 

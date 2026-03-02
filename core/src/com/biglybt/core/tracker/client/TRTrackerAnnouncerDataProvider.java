@@ -69,6 +69,23 @@ TRTrackerAnnouncerDataProvider
 	public boolean
 	isPeerSourceEnabled(
 		String		peer_source );
+	/**
+	 * Returns fake stat option state.
+	 * @param optionNumber the option index to query
+	 * @return true if the specified fake option is enabled
+	 */
+	public boolean
+	getFakeOption(
+		int		optionNumber );
+
+	/**
+	 * Returns general option state.
+	 * @param optionNumber the option index to query
+	 * @return true if the specified general option is enabled
+	 */
+	public boolean
+	getGeneralOption(
+		int		optionNumber );
 
 	public void
 	setPeerSources(

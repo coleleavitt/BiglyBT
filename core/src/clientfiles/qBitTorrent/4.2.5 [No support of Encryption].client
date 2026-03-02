@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<client>
+	<protocol type="ltep">
+		<clientName ltep="qBittorrent v4.2.5" />
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x18|0x00|0x05</reservedBytes>
+	</protocol>
+	<peerId type="anum" preFix="-qB4250-" length="20" isGlobal="false">
+		<charSet>!()*-._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	</peerId>
+	<key type="hex" length="8" isGlobal="false">
+	</key>
+	<announce>
+		<infoHash isLowerCase="true" exceptions="!()*-._~" />
+		<query staticNumwant="200">
+			<param>[info_hash]</param>
+			<param>[peer_id]</param>
+			<param>[port]</param>
+			<param>[uploaded]</param>
+			<param>[downloaded]</param>
+			<param>[left]</param>
+			<param>[corrupt]</param>
+			<param>[key]</param>
+			<param>{event}</param>
+			<param>[numwant]</param>
+			<param>[compact]</param>
+			<param>[no_peer_id]</param>
+			<param>&amp;redundant=0</param>
+		</query>
+		<header>
+			<field>Host: {host}:{port}</field>
+			<field>User-Agent: qBittorrent/4.2.5</field>
+			<field>Accept-Encoding: gzip</field>
+			<field>Connection: close</field>
+		</header>
+	</announce>
+</client>

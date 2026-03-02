@@ -71,6 +71,8 @@ import com.biglybt.pif.clientid.ClientIDGenerator;
 import com.biglybt.pif.download.DownloadAnnounceResult;
 import com.biglybt.pif.download.DownloadAnnounceResultPeer;
 import com.biglybt.pifimpl.local.clientid.ClientIDManagerImpl;
+import ghostfucker.spoof.PerfectSpoof;
+import ghostfucker.spoof.client.PSClient;
 
 /**
  *
@@ -106,6 +108,8 @@ TRTrackerBTAnnouncerImpl
 	}
 	
 	private static final AllTrackers	all_trackers = AllTrackersManager.getAllTrackers();
+	// NOTE: Don't cache psClient - it's null until PerfectSpoof is activated
+	// Use PerfectSpoof.getClient() dynamically instead
 
 	static void
 	analyseTimerEvents()
@@ -534,13 +538,50 @@ TRTrackerBTAnnouncerImpl
 
 	try {
 
-			info_hash += URLEncoder.encode(
+			// FIX #3: Apply PSClient.getInfoHash() lowercase encoding when spoofing
+			// qBittorrent (libtorrent) uses lowercase hex in percent-encoded info_hash
+			// Java's URLEncoder always produces UPPERCASE hex (%0B vs %0b)
+			String rawEncoded = URLEncoder.encode(
 					new String(torrent_hash_target.getBytes(), Constants.BYTE_ENCODING_CHARSET),
 					Constants.BYTE_ENCODING_CHARSET.name()).replaceAll("\\+", "%20");
 
-			tracker_peer_id_str += URLEncoder.encode(
+			if (PerfectSpoof.isActive()) {
+				PSClient ihClient = PerfectSpoof.getClient();
+				if (ihClient != null) {
+					String spoofedInfoHash = ihClient.getInfoHash(rawEncoded, (byte) 0);
+					System.out.println("[SPOOF-FIX] info_hash BEFORE (uppercase): info_hash=" + rawEncoded);
+					System.out.println("[SPOOF-FIX] info_hash AFTER  (lowercase): info_hash=" + spoofedInfoHash);
+					info_hash += spoofedInfoHash;
+				} else {
+					System.out.println("[SPOOF-FIX] WARNING: PSClient null during info_hash encoding, using raw");
+					info_hash += rawEncoded;
+				}
+			} else {
+				info_hash += rawEncoded;
+			}
+
+			// FIX #5: Apply lowercase hex encoding to peer_id when spoofing
+			// libtorrent's escape_string() uses hex_chars[]="0123456789abcdef" (lowercase)
+			// Java's URLEncoder.encode() produces UPPERCASE hex (e.g., %2A vs %2a)
+			String rawPeerIdEncoded = URLEncoder.encode(
 					new String(tracker_peer_id, Constants.BYTE_ENCODING_CHARSET),
 					Constants.BYTE_ENCODING_CHARSET.name()).replaceAll("\\+", "%20");
+
+			if (PerfectSpoof.isActive()) {
+				PSClient pidClient = PerfectSpoof.getClient();
+				if (pidClient != null) {
+					// Use getInfoHash with type=0 to apply lowercase hex conversion
+					// (it handles both info_hash and any percent-encoded string)
+					String spoofedPeerId = pidClient.getInfoHash(rawPeerIdEncoded, (byte) 0);
+					System.out.println("[SPOOF-FIX] peer_id BEFORE (uppercase): " + rawPeerIdEncoded);
+					System.out.println("[SPOOF-FIX] peer_id AFTER  (lowercase): " + spoofedPeerId);
+					tracker_peer_id_str += spoofedPeerId;
+				} else {
+					tracker_peer_id_str += rawPeerIdEncoded;
+				}
+			} else {
+				tracker_peer_id_str += rawPeerIdEncoded;
+			}
 
 	}catch (UnsupportedEncodingException e){
 
@@ -548,7 +589,6 @@ TRTrackerBTAnnouncerImpl
 
 	  throw( new TRTrackerAnnouncerException( "TRTrackerAnnouncer: URL encode fails"));
 	}
-
 	timer_event_action =
 		new TimerEventPerformer()
 		{
@@ -1326,6 +1366,14 @@ TRTrackerBTAnnouncerImpl
 		  try{
 
 			request_obj =  constructRequest( evt, original_url, event );
+
+			if (PerfectSpoof.isActive()) {
+				System.out.println("[SPOOF-DEBUG] ========== TRACKER ANNOUNCE REQUEST ==========");
+				System.out.println("[SPOOF-DEBUG] Full Request URL: " + request_obj.getURL());
+				System.out.println("[SPOOF-DEBUG] Original tracker URL: " + original_url);
+				System.out.println("[SPOOF-DEBUG] Event: " + evt);
+				System.out.println("[SPOOF-DEBUG] ================================================");
+			}
 			
 			all_trackers.addActiveRequest( request_obj );
 			
@@ -1348,6 +1396,18 @@ TRTrackerBTAnnouncerImpl
 				
 				int	resp_status = resp.getStatus();
 	
+				if (PerfectSpoof.isActive()) {
+					System.out.println("[SPOOF-DEBUG] ========== TRACKER RESPONSE ==========");
+					System.out.println("[SPOOF-DEBUG] Response status: " + resp_status + " (ST_ONLINE=" + TRTrackerAnnouncerResponse.ST_ONLINE + ", ST_REPORTED_ERROR=" + TRTrackerAnnouncerResponse.ST_REPORTED_ERROR + ", ST_OFFLINE=" + TRTrackerAnnouncerResponse.ST_OFFLINE + ")");
+					System.out.println("[SPOOF-DEBUG] Additional info: " + resp.getAdditionalInfo());
+					System.out.println("[SPOOF-DEBUG] Tracker URL: " + lastUsedUrl);
+					if (result_bytes != null) {
+						String respStr = new String(result_bytes, 0, Math.min(result_bytes.length, 500));
+						System.out.println("[SPOOF-DEBUG] Raw response (first 500 bytes): " + respStr);
+					}
+					System.out.println("[SPOOF-DEBUG] ================================================");
+				}
+
 			    if ( resp_status == TRTrackerAnnouncerResponse.ST_ONLINE ){
 	
 			    	if ( autoUDPProbeSuccessCount > prev_udp_probes_ok ){
@@ -1833,12 +1893,14 @@ TRTrackerBTAnnouncerImpl
 	 			http_properties.put( ClientIDGenerator.PR_SNI_HACK, true );
 	 		}
 	
-	 		try{
-	 			ClientIDManagerImpl.getSingleton().generateHTTPProperties( torrent_hash_target.getBytes(), http_properties );
-	
-	 		}catch( ClientIDException e ){
-	
-	 			throw( new IOException( e.getMessage()));
+	 		if ( !PerfectSpoof.isActive() ) {
+	 			try{
+	 				ClientIDManagerImpl.getSingleton().generateHTTPProperties( torrent_hash_target.getBytes(), http_properties );
+	 			}catch( ClientIDException e ){
+	 				throw( new IOException( e.getMessage()));
+	 			}
+	 		} else {
+	 			System.out.println("[SPOOF-DEBUG] Bypassing ClientIDManagerImpl.generateHTTPProperties() (PerfectSpoof active)");
 	 		}
 	
 	 		reqUrl = (URL)http_properties.get( ClientIDGenerator.PR_URL );
@@ -1922,23 +1984,179 @@ TRTrackerBTAnnouncerImpl
 	
 			con.setInstanceFollowRedirects( true );
 	
-	 		String	user_agent = (String)http_properties.get( ClientIDGenerator.PR_USER_AGENT );
+ 		String	user_agent = (String)http_properties.get( ClientIDGenerator.PR_USER_AGENT );
+
+		System.out.println("[TrackerAnnounce] Setting headers, PerfectSpoof.isActive() = " + PerfectSpoof.isActive());
+		PSClient currentClient = PerfectSpoof.getClient();
+		System.out.println("[TrackerAnnounce] PerfectSpoof.getClient() = " + currentClient);
+ 		if (PerfectSpoof.isActive() && currentClient != null) {
+ 			try {
+ 				// FIX #1 + #2: Use PSClient.getAnnounceHeader() to set headers in exact profile order
+ 				// This ensures Host, User-Agent, Accept-Encoding, Connection are sent in qBittorrent order
+ 				String[][] profileHeaders = currentClient.getAnnounceHeader();
+ 				if (profileHeaders != null) {
+ 					System.out.println("[SPOOF-FIX] Applying " + profileHeaders.length + " headers from .client profile in order:");
+ 					for (String[] h : profileHeaders) {
+ 						if (h == null || h[0] == null || h[1] == null) continue;
+ 						String name = h[0].trim();
+ 						String value = h[1].trim();
+
+ 						// Resolve Host header placeholders
+ 						if (name.equalsIgnoreCase("Host")) {
+ 							String host = reqUrl.getHost();
+ 							int port = reqUrl.getPort();
+ 							value = value.replace("{host}", host);
+ 							boolean showDefaultPort = currentClient.getAnnounceShowDefaultPort();
+ 							if (port == -1 || (!showDefaultPort && port == reqUrl.getDefaultPort())) {
+ 								// Remove :{port} placeholder entirely (qBittorrent omits default port)
+ 								value = value.replace(":{port}", "");
+ 							} else {
+ 								value = value.replace("{port}", String.valueOf(port));
+ 							}
+ 						}
+
+ 						con.setRequestProperty(name, value);
+ 						System.out.println("[SPOOF-FIX]   " + name + ": " + value);
+ 					}
+ 				} else {
+ 					// Fallback: at least set User-Agent
+ 					System.out.println("[SPOOF-FIX] WARNING: profileHeaders is null, falling back to manual UA");
+ 					String spoofedUserAgent = currentClient.getUserAgent();
+ 					if (spoofedUserAgent != null) {
+ 						con.setRequestProperty("User-Agent", spoofedUserAgent);
+ 					} else if (user_agent != null) {
+ 						con.setRequestProperty("User-Agent", user_agent);
+ 					}
+ 					con.setRequestProperty("Connection", "close");
+ 					con.addRequestProperty("Accept-Encoding", "gzip");
+ 				}
+
+ 				// FIX #1 + #4: Completely REMOVE Accept header via reflection
+ 				// Java HttpURLConnection auto-adds "Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2"
+ 				// Setting to empty still sends "Accept: \r\n" on wire. qBittorrent sends NO Accept header.
+ 				// We first set it empty (prevents Java from adding its default), then use reflection
+ 				// to physically remove it from the internal MessageHeader.
+ 				con.setRequestProperty("Accept", ""); // Prevent Java's default from being added
+ 				try {
+ 					java.lang.reflect.Field reqField = null;
+ 					Class<?> conClass = con.getClass();
+ 					while (conClass != null && reqField == null) {
+ 						try {
+ 							reqField = conClass.getDeclaredField("requests");
+ 						} catch (NoSuchFieldException nsfe) {
+ 							conClass = conClass.getSuperclass();
+ 						}
+ 					}
+ 					if (reqField != null) {
+ 						reqField.setAccessible(true);
+ 						Object msgHeader = reqField.get(con);
+ 						java.lang.reflect.Method removeMethod = msgHeader.getClass().getMethod("remove", String.class);
+ 						removeMethod.invoke(msgHeader, "Accept");
+ 						System.out.println("[SPOOF-FIX] Accept header REMOVED via reflection (MessageHeader.remove)");
+ 					} else {
+ 						System.out.println("[SPOOF-FIX] WARNING: Could not find 'requests' field for Accept removal");
+ 					}
+ 				} catch (Exception reflEx) {
+ 					System.out.println("[SPOOF-FIX] Accept reflection removal failed: " + reflEx.getMessage());
+ 					System.out.println("[SPOOF-FIX] Falling back to empty Accept header");
+ 				}
+
+ 			} catch (Exception e) {
+				System.out.println("[SPOOF-FIX] Exception applying profile headers: " + e.getMessage());
+				e.printStackTrace();
+ 				if (user_agent != null) {
+ 					con.setRequestProperty("User-Agent", user_agent);
+ 				}
+ 				con.setRequestProperty("Connection", "close");
+ 				con.addRequestProperty("Accept-Encoding", "gzip");
+ 			}
+ 		} else if (user_agent != null) {
+			System.out.println("[TrackerAnnounce] Using DEFAULT User-Agent: " + user_agent);
+ 			con.setRequestProperty("User-Agent", user_agent);
+ 			con.setRequestProperty("Connection", "close");
+ 			con.addRequestProperty("Accept-Encoding", "gzip");
+ 		} else {
+ 			con.setRequestProperty("Connection", "close");
+ 			con.addRequestProperty("Accept-Encoding", "gzip");
+ 		}
 	
-	 		if ( user_agent != null ){
-	
-	 			con.setRequestProperty("User-Agent", user_agent );
-	 		}
-	
-	 		con.setRequestProperty("Connection", "close" );
-	
-	 		// some trackers support gzip encoding of replies
-	
-	 		con.addRequestProperty("Accept-Encoding","gzip");
-	
+			// [SPOOF-DEBUG] Comprehensive HTTP header analysis
+			if (PerfectSpoof.isActive()) {
+				System.out.println("[SPOOF-DEBUG] ========== HTTP REQUEST HEADERS (pre-connect) ==========");
+				System.out.println("[SPOOF-DEBUG] Request URL: " + reqUrl);
+				System.out.println("[SPOOF-DEBUG] Request Method: " + con.getRequestMethod());
+				System.out.println("[SPOOF-DEBUG] Connection class: " + con.getClass().getName());
+				System.out.println("[SPOOF-DEBUG] --- Explicitly set headers (via getRequestProperties): ---");
+				java.util.Map<String, java.util.List<String>> reqHeaders = con.getRequestProperties();
+				for (java.util.Map.Entry<String, java.util.List<String>> entry : reqHeaders.entrySet()) {
+					System.out.println("[SPOOF-DEBUG]   " + entry.getKey() + ": " + entry.getValue());
+				}
+				System.out.println("[SPOOF-DEBUG] --- Accept header status: ---");
+				System.out.println("[SPOOF-DEBUG]   Accept was set to empty + removed via reflection (FIX #4)");
+				System.out.println("[SPOOF-DEBUG]   If reflection succeeded, Accept should NOT appear on wire");
+				System.out.println("[SPOOF-DEBUG] --- PSClient .client profile says headers SHOULD be: ---");
+				PSClient headerClient = PerfectSpoof.getClient();
+				if (headerClient != null) {
+					String[][] profileHeaders = headerClient.getAnnounceHeader();
+					if (profileHeaders != null) {
+						for (String[] h : profileHeaders) {
+							System.out.println("[SPOOF-DEBUG]   EXPECTED: " + h[0] + ":" + h[1]);
+						}
+					} else {
+						System.out.println("[SPOOF-DEBUG]   profileHeaders is null!");
+					}
+					System.out.println("[SPOOF-DEBUG]   hostIndex=" + headerClient.getAnnounceHostIndex());
+					System.out.println("[SPOOF-DEBUG]   httpVersion=" + headerClient.getAnnounceHttpVersion());
+					System.out.println("[SPOOF-DEBUG]   showDefaultPort=" + headerClient.getAnnounceShowDefaultPort());
+				}
+				System.out.println("[SPOOF-DEBUG] --- HEADER STATUS (post-fix) ---");
+				System.out.println("[SPOOF-DEBUG]   Headers set from PSClient.getAnnounceHeader() in profile order (FIX #2)");
+				System.out.println("[SPOOF-DEBUG]   Expected wire order: Host, User-Agent, Accept-Encoding, Connection (NO Accept)");
+				System.out.println("[SPOOF-DEBUG] ================================================");
+			}
+
 	 		try{
-	
+
 	 			try{
 	 				con.connect();
+					// [SPOOF-DEBUG] Post-connect: use reflection to read actual wire headers
+					if (PerfectSpoof.isActive()) {
+						try {
+							System.out.println("[SPOOF-DEBUG] ========== ACTUAL WIRE HEADERS (post-connect, reflection) ==========");
+							java.lang.reflect.Field requestsField = null;
+							Class<?> clazz = con.getClass();
+							while (clazz != null && requestsField == null) {
+								try {
+									requestsField = clazz.getDeclaredField("requests");
+								} catch (NoSuchFieldException nsfe) {
+									// try userHeaders, requestHeaders too
+									try { requestsField = clazz.getDeclaredField("userHeaders"); } catch (NoSuchFieldException e2) {}
+								}
+								if (requestsField == null) clazz = clazz.getSuperclass();
+							}
+							if (requestsField != null) {
+								requestsField.setAccessible(true);
+								Object msgHeader = requestsField.get(con);
+								System.out.println("[SPOOF-DEBUG] Internal requests field type: " + msgHeader.getClass().getName());
+								System.out.println("[SPOOF-DEBUG] Internal requests: " + msgHeader.toString());
+							} else {
+								System.out.println("[SPOOF-DEBUG] Could not find 'requests' field via reflection");
+								// Fallback: list all declared fields
+								clazz = con.getClass();
+								while (clazz != null) {
+									System.out.println("[SPOOF-DEBUG]   Class " + clazz.getName() + " fields:");
+									for (java.lang.reflect.Field f : clazz.getDeclaredFields()) {
+										System.out.println("[SPOOF-DEBUG]     " + f.getType().getSimpleName() + " " + f.getName());
+									}
+									clazz = clazz.getSuperclass();
+									if (clazz != null && clazz.getName().equals("java.lang.Object")) break;
+								}
+							}
+							System.out.println("[SPOOF-DEBUG] ================================================");
+						} catch (Exception reflEx) {
+							System.out.println("[SPOOF-DEBUG] Reflection failed: " + reflEx.getClass().getSimpleName() + ": " + reflEx.getMessage());
+						}
+					}
 	
 				}catch( AEProxyFactory.UnknownHostException e ){
 	
@@ -1974,6 +2192,19 @@ TRTrackerBTAnnouncerImpl
 	 			try{
 	
 	 				is = con.getInputStream();
+
+				// [SPOOF-DEBUG] Dump HTTP response details
+				if (PerfectSpoof.isActive()) {
+					System.out.println("[SPOOF-DEBUG] ========== HTTP RESPONSE ==========");
+					System.out.println("[SPOOF-DEBUG] Response Code: " + con.getResponseCode());
+					System.out.println("[SPOOF-DEBUG] Response Message: " + con.getResponseMessage());
+					System.out.println("[SPOOF-DEBUG] Response URL: " + con.getURL());
+					java.util.Map<String, java.util.List<String>> respHeaders = con.getHeaderFields();
+					for (java.util.Map.Entry<String, java.util.List<String>> entry : respHeaders.entrySet()) {
+						System.out.println("[SPOOF-DEBUG]   Response Header: " + entry.getKey() + " = " + entry.getValue());
+					}
+					System.out.println("[SPOOF-DEBUG] ================================================");
+				}
 	
 	 				String	resulting_url_str = con.getURL().toString();
 	
@@ -2113,6 +2344,21 @@ TRTrackerBTAnnouncerImpl
 	 			con.disconnect();
 	 		}
 	
+			// [SPOOF-DEBUG] Log final result of HTTP announce
+			if (PerfectSpoof.isActive()) {
+				System.out.println("[SPOOF-DEBUG] ========== HTTP ANNOUNCE RESULT ==========");
+				if (failure_reason != null) {
+					System.out.println("[SPOOF-DEBUG] FAILURE: " + failure_reason);
+				} else {
+					System.out.println("[SPOOF-DEBUG] SUCCESS: No failure reason (response OK)");
+				}
+				System.out.println("[SPOOF-DEBUG] Response body size: " + message.size() + " bytes");
+				if (message.size() > 0 && message.size() < 1000) {
+					System.out.println("[SPOOF-DEBUG] Response body: " + message.toString());
+				}
+				System.out.println("[SPOOF-DEBUG] ================================================");
+			}
+
 	 		return( failure_reason );
 	 		
  		}catch( IOException e ){
@@ -2241,6 +2487,22 @@ TRTrackerBTAnnouncerImpl
 		
 					 				PRUDPPacketRequest request;
 		
+							// UDP spoofing: use PerfectSpoof peer_id when active
+							byte[] udp_peer_id = tracker_peer_id;
+							if (PerfectSpoof.isActive()) {
+								PSClient udpSpoofClient = PerfectSpoof.getClient();
+								if (udpSpoofClient != null) {
+									byte[] spoofedPeerId = udpSpoofClient.getPeerId();
+									if (spoofedPeerId != null && spoofedPeerId.length == 20) {
+										udp_peer_id = spoofedPeerId;
+										System.out.println("[UDP-SPOOF] Using spoofed peer_id: " + com.biglybt.core.util.ByteFormatter.nicePrint(udp_peer_id, true));
+									} else {
+										System.out.println("[UDP-SPOOF] WARNING: Spoofed peer_id null or wrong length, using default");
+									}
+								} else {
+									System.out.println("[UDP-SPOOF] WARNING: PSClient null, using default peer_id");
+								}
+							}
 					 				if ( PRUDPPacketTracker.VERSION == 1 ){
 		
 					 					PRUDPPacketRequestAnnounce announce_request = new PRUDPPacketRequestAnnounce( my_connection );
@@ -2286,7 +2548,7 @@ TRTrackerBTAnnouncerImpl
 		
 						 				announce_request.setDetails(
 						 					torrent_hash_target.getBytes(),
-						 					tracker_peer_id,
+										udp_peer_id,
 											getLongURLParam( url_str, "downloaded" ),
 											event,
 											ip,
@@ -2339,7 +2601,7 @@ TRTrackerBTAnnouncerImpl
 		
 						 				announce_request.setDetails(
 						 					torrent_hash_target.getBytes(),
-						 					tracker_peer_id,
+										udp_peer_id,
 											getLongURLParam( url_str, "downloaded" ),
 											event,
 											ip,
@@ -2628,11 +2890,40 @@ TRTrackerBTAnnouncerImpl
   		request.append('?');
   	}
 
+  	// Capture paramIndex: marks where query parameters begin (needed for PSClient.getAnnounce URL rewriting)
+  	int paramIndex = request.toString().length();
+
   		// the client-id stuff RELIES on info_hash being the FIRST parameter added by
   		// us to the URL, so don't change it!
 
-  	request.append(info_hash);
-  	request.append(tracker_peer_id_str);
+  request.append(info_hash);
+	System.out.println("[TrackerAnnounce] PerfectSpoof.isActive() = " + PerfectSpoof.isActive());
+	// Cache PSClient once at start of constructRequest to avoid multiple getClient() calls
+	PSClient cachedClient = PerfectSpoof.getClient();
+	System.out.println("[TrackerAnnounce] PerfectSpoof.getClient() = " + cachedClient);
+	if (PerfectSpoof.isActive() && cachedClient != null) {
+		try {
+			byte[] spoofedPeerId = cachedClient.getPeerId();
+			System.out.println("[TrackerAnnounce] Spoofed peer_id bytes: " + (spoofedPeerId != null ? new String(spoofedPeerId) : "null"));
+			if (spoofedPeerId != null) {
+				String encodedPeerId = URLEncoder.encode(
+					new String(spoofedPeerId, Constants.BYTE_ENCODING_CHARSET),
+					Constants.BYTE_ENCODING_CHARSET.name()).replaceAll("\\+", "%20");
+				System.out.println("[TrackerAnnounce] Using SPOOFED peer_id: " + encodedPeerId);
+				request.append("&peer_id=").append(encodedPeerId);
+			} else {
+				System.out.println("[TrackerAnnounce] Spoofed peer_id is null, falling back to default");
+				request.append(tracker_peer_id_str);
+			}
+		} catch (Exception e) {
+			System.out.println("[TrackerAnnounce] Exception getting spoofed peer_id: " + e.getMessage());
+			e.printStackTrace();
+			request.append(tracker_peer_id_str);
+		}
+	} else {
+		System.out.println("[TrackerAnnounce] Using DEFAULT peer_id (spoof not active or client null)");
+		request.append(tracker_peer_id_str);
+	}
 
   	int tcp_port = announce_data_provider.getTCPListeningPortNumber();
   	
@@ -2682,7 +2973,20 @@ TRTrackerBTAnnouncerImpl
 	}catch( Throwable e ){
 	}
 				
-  	request.append(port_details);
+  	if (PerfectSpoof.isActive()) {
+  		// Strip BiglyBT/Azureus-specific params from port_details, keep only &port=NNNNN
+  		String cleanedPortDetails = port_details
+  			.replaceAll("&requirecrypto=[0-9]+", "")
+  			.replaceAll("&azudp=[0-9]+", "")
+  			.replaceAll("&azhttp=[0-9]+", "")
+  			.replaceAll("&cryptoport=[0-9]+", "")
+  			.replaceAll("&hide=[0-9]+", "");
+  		System.out.println("[SPOOF-DEBUG] port_details ORIGINAL: " + port_details);
+  		System.out.println("[SPOOF-DEBUG] port_details CLEANED:  " + cleanedPortDetails);
+  		request.append(cleanedPortDetails);
+  	} else {
+  		request.append(port_details);
+  	}
   	
   	long total_sent 	= announce_data_provider.getTotalSent();
   	long total_received	= announce_data_provider.getTotalReceived();
@@ -2690,14 +2994,21 @@ TRTrackerBTAnnouncerImpl
   	request.append("&uploaded=").append( total_sent );
   	request.append("&downloaded=").append( total_received );
 
-  	if ( Constants.DOWNLOAD_SOURCES_PRETEND_COMPLETE ){
-
-  	 	request.append("&left=0");
-
-  	}else{
-
-  		request.append("&left=").append(announce_data_provider.getRemaining());
+  	long remaining = announce_data_provider.getRemaining();
+  	boolean noReportSeedEarly = announce_data_provider != null && announce_data_provider.getFakeOption(6);
+  	boolean noReportLeechEarly = announce_data_provider != null && announce_data_provider.getFakeOption(7);
+  	boolean showAsSeedEarly = announce_data_provider != null && announce_data_provider.getFakeOption(12);
+  	if ( Constants.DOWNLOAD_SOURCES_PRETEND_COMPLETE || showAsSeedEarly ){
+  		// Fake Option 12: Force appear as seed to tracker - always report left=0
+  		remaining = 0L;
+  	} else if (noReportSeedEarly && remaining == 0L) {
+  		// Don't announce as seeder: report left > 0 even when complete
+  		remaining = 1L;
+  	} else if (noReportLeechEarly && remaining > 0L) {
+  		// Don't announce as leecher: report left = 0 to appear as seed
+  		remaining = 0L;
   	}
+  	request.append("&left=").append(remaining);
 
   		// 3017: added at request of tracker admins who want to be able to monitor swarm poisoning
 
@@ -2705,8 +3016,10 @@ TRTrackerBTAnnouncerImpl
 
 
     //TrackerID extension
-    if( tracker_id.length() > 0 ) {
+    if( tracker_id.length() > 0 && !PerfectSpoof.isActive() ) {
       request.append( "&trackerid=").append(tracker_id );
+    } else if ( tracker_id.length() > 0 && PerfectSpoof.isActive() ) {
+      System.out.println("[SPOOF-DEBUG] Skipping trackerid parameter (PerfectSpoof active): " + tracker_id);
     }
 
 
@@ -2720,7 +3033,7 @@ TRTrackerBTAnnouncerImpl
 
     	request.append("&numwant=0");
 
-    	if ( stopped_for_queue ){
+    	if ( stopped_for_queue && !PerfectSpoof.isActive() ){
 
     		request.append( "&azq=1" );
     	}
@@ -2729,6 +3042,14 @@ TRTrackerBTAnnouncerImpl
       //calculate how many peers we should ask for
 
       int numwant = Math.min(calculateNumWant(),userMaxNumwant);
+      // Override numwant with static value from .client profile when spoofing (e.g. qBittorrent uses 200)
+      if (PerfectSpoof.isActive()) {
+          // Use cachedClient from method start
+          if (cachedClient != null && cachedClient.isStaticNumwant()) {
+              numwant = cachedClient.getStaticNumwant();
+              System.out.println("[SPOOF-DEBUG] Overriding numwant with static value: " + numwant);
+          }
+      }
 
 
       request.append("&numwant=").append(numwant);
@@ -2906,7 +3227,21 @@ TRTrackerBTAnnouncerImpl
 
     if ( COConfigurationManager.getBooleanParameter("Tracker Key Enable Client", true )){
 
-      	request.append( "&key=").append( helper.getTrackerKey());
+	// Use cachedClient from method start
+	if (PerfectSpoof.isActive() && cachedClient != null) {
+      		try {
+      			String spoofedKey = cachedClient.getKey();
+      			if (spoofedKey != null) {
+      				request.append("&key=").append(spoofedKey);
+      			} else {
+      				request.append("&key=").append(helper.getTrackerKey());
+      			}
+      		} catch (Exception e) {
+      			request.append("&key=").append(helper.getTrackerKey());
+      		}
+      	} else {
+      		request.append("&key=").append(helper.getTrackerKey());
+    	}
     }
 
 	String	ext = announce_data_provider.getExtensions();
@@ -2925,38 +3260,42 @@ TRTrackerBTAnnouncerImpl
 		request.append( ext );
 	}
 
-	request.append( "&azver=" + TRTrackerAnnouncer.AZ_TRACKER_VERSION_CURRENT );
+	if ( !PerfectSpoof.isActive() ) {
+		request.append( "&azver=" + TRTrackerAnnouncer.AZ_TRACKER_VERSION_CURRENT );
 
-	if ( az_tracker && !stopped ){
+		if ( az_tracker && !stopped ){
 
-		long up = announce_data_provider.getUploadSpeedKBSec( evt.equals( "started" ));
+			long up = announce_data_provider.getUploadSpeedKBSec( evt.equals( "started" ));
 
-		if ( up > 0 ){
+			if ( up > 0 ){
 
-			request.append("&azup=").append(up);
-		}
+				request.append("&azup=").append(up);
+			}
 
-		String as = NetworkAdmin.getSingleton().getCurrentASN().getAS();
+			String as = NetworkAdmin.getSingleton().getCurrentASN().getAS();
 
-	    if ( as.length() > 0 ){
+			if ( as.length() > 0 ){
 
-	    	request.append("&azas=").append(URLEncoder.encode(as, "UTF8"));
-	    }
+				request.append("&azas=").append(URLEncoder.encode(as, "UTF8"));
+			}
 
-		DHTNetworkPosition	best_position = DHTNetworkPositionManager.getBestLocalPosition();
+			DHTNetworkPosition	best_position = DHTNetworkPositionManager.getBestLocalPosition();
 
-		if ( best_position != null ){
+			if ( best_position != null ){
 
-			try{
-				byte[]	bytes = DHTNetworkPositionManager.serialisePosition( best_position );
+				try{
+					byte[]	bytes = DHTNetworkPositionManager.serialisePosition( best_position );
 
-				request.append("&aznp=").append(Base32.encode(bytes));
+					request.append("&aznp=").append(Base32.encode(bytes));
 
-			}catch( Throwable e ){
+				}catch( Throwable e ){
 
-				Debug.printStackTrace( e );
+					Debug.printStackTrace( e );
+				}
 			}
 		}
+	} else {
+		System.out.println("[SPOOF-DEBUG] Skipping azver/azup/azas/aznp parameters (PerfectSpoof active)");
 	}
 
 		// bah, issue with an i2p tracker regarding what is passed it seems: truncate to minimum required and order for the moment...
@@ -2996,7 +3335,25 @@ TRTrackerBTAnnouncerImpl
 		request = new StringBuffer( head + "?" + tail );
 	}
 
-  	return( new TRTrackerAnnouncerRequestImpl( helper.getSessionID(), torrent_hash_target, stopped, new URL( request.toString()), total_sent, total_received ));
+  	String requestAsString = request.toString();
+  	if (PerfectSpoof.isActive()) {
+		// Use cachedClient from method start
+		if (cachedClient != null) {
+  			System.out.println("[SPOOF-DEBUG] ========== PRE-SPOOF URL ==========");
+  			System.out.println("[SPOOF-DEBUG] BEFORE PSClient.getAnnounce(): " + requestAsString);
+  			System.out.println("[SPOOF-DEBUG] paramIndex=" + paramIndex + " (base URL ends, params begin)");
+  			requestAsString = cachedClient.getAnnounce(requestAsString, paramIndex);
+  			System.out.println("[SPOOF-DEBUG] AFTER PSClient.getAnnounce():  " + requestAsString);
+  			System.out.println("[SPOOF-DEBUG] ================================================");
+  		} else {
+  			System.out.println("[SPOOF-DEBUG] WARNING: PSClient is null, cannot rewrite URL!");
+  			System.out.println("[SPOOF-DEBUG] FINAL URL (unrewritten): " + requestAsString);
+  		}
+  	} else {
+  		System.out.println("[SPOOF-DEBUG] Spoof not active, using original URL: " + requestAsString);
+  	}
+
+  	return( new TRTrackerAnnouncerRequestImpl( helper.getSessionID(), torrent_hash_target, stopped, new URL( requestAsString ), total_sent, total_received ));
   }
 
   protected int
@@ -3418,6 +3775,9 @@ TRTrackerBTAnnouncerImpl
 
 					} catch (Exception e) {
 
+    				     System.out.println("[SPOOF-DEBUG] ========== TRACKER RESPONSE FAILURE ==========");
+    				     System.out.println("[SPOOF-DEBUG] Exception in response decode: " + e.getMessage());
+    				     System.out.println("[SPOOF-DEBUG] metaData keys: " + (metaData != null ? metaData.keySet() : "null"));
     				     byte[]	failure_reason_bytes = (byte[]) metaData.get("failure reason");
 
     				     if ( failure_reason_bytes == null ){
@@ -3434,6 +3794,11 @@ TRTrackerBTAnnouncerImpl
     			     		// explicit failure from the tracker
 
     			       failure_reason = new String( failure_reason_bytes, Constants.DEFAULT_ENCODING_CHARSET);
+
+    			       System.out.println("[SPOOF-DEBUG] TRACKER FAILURE REASON: " + failure_reason);
+    			       System.out.println("[SPOOF-DEBUG] failure_reason_bytes length: " + failure_reason_bytes.length);
+    			       System.out.println("[SPOOF-DEBUG] Returning ST_REPORTED_ERROR to caller");
+    			       System.out.println("[SPOOF-DEBUG] ================================================");
 
     			       return( new TRTrackerAnnouncerResponseImpl( url, torrent_hash_actual, TRTrackerAnnouncerResponse.ST_REPORTED_ERROR, getErrorRetryInterval(), failure_reason ));
 

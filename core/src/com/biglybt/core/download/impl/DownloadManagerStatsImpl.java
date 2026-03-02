@@ -111,6 +111,9 @@ DownloadManagerStatsImpl
 
 	private long saved_completed_download_bytes = -1;
 
+	// Fake stats for extreme mod
+	private long saved_data_bytes_downloaded_fake;
+	private long saved_data_bytes_uploaded_fake;
 	private int max_upload_rate_bps = 0;  //0 for unlimited
 	private int max_download_rate_bps = 0;  //0 for unlimited
 
@@ -1477,6 +1480,9 @@ DownloadManagerStatsImpl
 		saved_data_bytes_downloaded 	= getTotalDataBytesReceived();
 		saved_data_bytes_uploaded		= getTotalDataBytesSent();
 
+		saved_data_bytes_downloaded_fake = getTotalDataBytesReceivedFake();
+		saved_data_bytes_uploaded_fake	= getTotalDataBytesSentFake();
+
 		saved_protocol_bytes_downloaded = getTotalProtocolBytesReceived();
 		saved_protocol_bytes_uploaded	= getTotalProtocolBytesSent();
 
@@ -1522,6 +1528,8 @@ DownloadManagerStatsImpl
 	restoreSessionTotals(
 		long		_saved_data_bytes_downloaded,
 		long		_saved_data_bytes_uploaded,
+		long		_saved_data_bytes_downloaded_fake,
+		long		_saved_data_bytes_uploaded_fake,
 		long		_saved_discarded,
 		long		_saved_hashfails,
 		long		_saved_SecondsDownloading,
@@ -1529,6 +1537,8 @@ DownloadManagerStatsImpl
 	{
 		saved_data_bytes_downloaded	= _saved_data_bytes_downloaded;
 		saved_data_bytes_uploaded	= _saved_data_bytes_uploaded;
+		saved_data_bytes_downloaded_fake	= _saved_data_bytes_downloaded_fake;
+		saved_data_bytes_uploaded_fake	= _saved_data_bytes_uploaded_fake;
 		saved_discarded				= _saved_discarded;
 		saved_hashfails				= _saved_hashfails;
 		saved_SecondsDownloading	= _saved_SecondsDownloading;
@@ -1692,6 +1702,81 @@ DownloadManagerStatsImpl
 		return( result );
 	}
 
+
+	// --- Fake stats methods for extreme mod ---
+
+	public void dataBytesSentFake(long length) {
+		PEPeerManager pm = download_manager.getPeerManager();
+		if (length > 0 && pm != null) {
+			pm.getStats().dataBytesSentFake(length);
+		}
+	}
+
+	public void dataBytesReceivedFake(long length) {
+		PEPeerManager pm = download_manager.getPeerManager();
+		if (length > 0 && pm != null) {
+			pm.getStats().dataBytesReceivedFake(length);
+		}
+	}
+
+	public long getTotalDataBytesReceivedFake() {
+		PEPeerManager pm = download_manager.getPeerManager();
+		if (pm != null) {
+			return saved_data_bytes_downloaded_fake + pm.getStats().getTotalDataBytesReceivedFake();
+		}
+		return saved_data_bytes_downloaded_fake;
+	}
+
+	public long getTotalDataBytesSentFake() {
+		PEPeerManager pm = download_manager.getPeerManager();
+		if (pm != null) {
+			return saved_data_bytes_uploaded_fake + pm.getStats().getTotalDataBytesSentFake();
+		}
+		return saved_data_bytes_uploaded_fake;
+	}
+
+	public int getShareRatioFake() {
+		long downloaded = getTotalDataBytesReceivedFake();
+		long uploaded = getTotalDataBytesSentFake();
+		if (downloaded <= 0) {
+			return -1;
+		}
+		return (int)(1000 * uploaded / downloaded);
+	}
+
+	public long getDataSendRateFake() {
+		PEPeerManager pm = download_manager.getPeerManager();
+		return pm != null ? pm.getStats().getDataSendRateFake() : 0;
+	}
+
+	public long getDataReceivedRateFake() {
+		PEPeerManager pm = download_manager.getPeerManager();
+		return pm != null ? pm.getStats().getDataReceivedRateFake() : 0;
+	}
+
+	public int getCompletedFake() {
+		DiskManager dm = download_manager.getDiskManager();
+		if (dm == null) {
+			int state = download_manager.getState();
+			if (state == DownloadManager.STATE_ALLOCATING ||
+			    state == DownloadManager.STATE_CHECKING ||
+			    state == DownloadManager.STATE_INITIALIZING)
+				return completed;
+			else
+				return getDownloadCompleted(true);
+		}
+		if (dm.getState() == DiskManager.ALLOCATING ||
+		    dm.getState() == DiskManager.CHECKING ||
+		    dm.getState() == DiskManager.INITIALIZING)
+			return dm.getPercentDone();
+		else {
+			long total = dm.getTotalLength();
+			if (total != 0 && download_manager.getPeerManager() != null) {
+				return (int)(1000 * (total - download_manager.getPeerManager().getRemainingFake()) / total);
+			}
+			return 0;
+		}
+	}
 
 	protected void
 	generateEvidence(

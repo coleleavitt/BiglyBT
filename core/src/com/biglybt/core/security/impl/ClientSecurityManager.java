@@ -22,7 +22,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
-import java.net.NetPermission;
 import java.net.NetworkInterface;
 import java.security.Permission;
 import java.util.HashSet;
@@ -34,6 +33,21 @@ import com.biglybt.core.config.ConfigKeys;
 import com.biglybt.core.security.SESecurityManager.MySecurityManager;
 import com.biglybt.core.util.SystemProperties;
 
+/**
+ * Legacy SecurityManager implementation for Java < 18.
+ * 
+ * SecurityManager is deprecated for removal in Java 17+ (JEP 411) and will be
+ * completely removed in a future Java release. This class is only instantiated
+ * on Java versions < 18 (see SESecurityManagerImpl.initialise()).
+ * 
+ * For Java 18+, SESecurityManagerImpl provides alternative implementations:
+ * - getClassContext() uses StackWalker API
+ * - filterNetworkInterfaces() implements filtering directly
+ * 
+ * @see SESecurityManagerImpl#getClassContext()
+ * @see SESecurityManagerImpl#filterNetworkInterfaces(List)
+ */
+@SuppressWarnings("removal")  // SecurityManager is deprecated for removal, but needed for Java < 18
 public final class
 ClientSecurityManager
 	extends SecurityManager
@@ -134,7 +148,7 @@ ClientSecurityManager
 		Permission 	perm,
 		Object 		context)
 	{
-		if ( perm instanceof RuntimePermission ){
+		if ( "java.lang.RuntimePermission".equals(perm.getClass().getName()) ){
 
 			String name = perm.getName();
 
@@ -151,7 +165,7 @@ ClientSecurityManager
 
 				throw( new SecurityException( "Permission Denied"));
 			}
-		}else if ( perm instanceof NetPermission ){
+		}else if ( "java.net.NetPermission".equals(perm.getClass().getName()) ){
 			
 				// we have to fail this permission in order to cause the NetworkInterface code
 				// to revert to calling checkConnect 

@@ -214,4 +214,8 @@ PEPeerManagerAdapter
 	
 	public void
 	saveTorrentState();
+
+	// Extreme Mod: access to download manager for fake byte generation
+	public com.biglybt.core.download.DownloadManager getDownload_manager();
+
 }

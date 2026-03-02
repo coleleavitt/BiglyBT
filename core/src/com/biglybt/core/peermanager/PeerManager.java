@@ -1985,6 +1985,12 @@ public class PeerManager implements CoreStatsProvider {
 				int					reason )
 			{	
 			}
+			@Override
+			public long getSentFake(){ return( 0 ); }
+			@Override
+			public long getReceivedFake(){ return( 0 ); }
+			@Override
+			public long getRemainingFake(){ return( 0 ); }
 			
 			private void 
 			log()

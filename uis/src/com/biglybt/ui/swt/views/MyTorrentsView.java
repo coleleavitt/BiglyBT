@@ -3761,6 +3761,9 @@ public class MyTorrentsView
 				PrivacyView.MSGID_PREFIX, null, PrivacyView.class));
 
 		vm.registerView(Download.class, new UISWTViewBuilderCore(
+				ShuView.MSGID_PREFIX, null, ShuView.class));
+
+		vm.registerView(Download.class, new UISWTViewBuilderCore(
 				LoggerView.MSGID_PREFIX, null, LoggerView.class));
 		
 		vm.registerView(Download.class, new UISWTViewBuilderCore(

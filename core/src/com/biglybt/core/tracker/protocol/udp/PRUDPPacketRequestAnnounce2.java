@@ -203,6 +203,10 @@ PRUDPPacketRequestAnnounce2
 		throws IOException
 	{
 		super.serialise(os);
+		// [PEER-DEBUG] Log UDP tracker announce v2 serialization
+		try {
+			System.out.println("[PEER-DEBUG] PRUDPPacketRequestAnnounce2.serialise() - peer_id=" + ByteFormatter.nicePrint(peer_id, true) + " key=" + key);
+		} catch (Exception e) { System.out.println("[PEER-DEBUG] PRUDPPacketRequestAnnounce2.serialise() - error: " + e.getMessage()); }
 
 		os.write( hash );
 		os.write( peer_id );

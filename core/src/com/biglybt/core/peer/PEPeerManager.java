@@ -395,6 +395,24 @@ PEPeerManager
   public int getAverageCompletionInThousandNotation();
 
   /**
+   * Get sent fake bytes.
+   * @return sent fake bytes
+   */
+  public long getSentFake();
+
+  /**
+   * Get received fake bytes.
+   * @return received fake bytes
+   */
+  public long getReceivedFake();
+
+  /**
+   * Get remaining fake bytes.
+   * @return remaining fake bytes
+   */
+  public long getRemainingFake();
+
+  /**
    * Max completion of connected peers (doesn't factor in our completion)
    * @return
    */
