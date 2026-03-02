@@ -30,7 +30,7 @@
 			<field>Host: {host}:{port}</field>
 			<field>User-Agent: Transmission/2.94</field>
 			<field>Accept: */*</field>
-			<field>Accept-Encoding: identity</field>s
+			<field>Accept-Encoding: identity</field>
 		</header>
 	</announce>
 </client>

@@ -54,12 +54,12 @@ publishing {
 }
 
 tasks.withType<JavaCompile> {
-    options.encoding = "8859_1"
+    options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-Xlint:-options", "-Xlint:-deprecation"))
 }
 
 tasks.withType<Javadoc> {
-    options.encoding = "8859_1"
+    options.encoding = "UTF-8"
 }
 
 sourceSets {

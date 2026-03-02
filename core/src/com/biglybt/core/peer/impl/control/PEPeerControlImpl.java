@@ -90,6 +90,7 @@ import com.biglybt.pif.network.Connection;
 import com.biglybt.pif.network.OutgoingMessageQueue;
 import com.biglybt.pif.peers.Peer;
 import com.biglybt.pif.peers.PeerDescriptor;
+import shu.utils.ShuUtils;
 
 /**
  * manages all peer transports for a torrent
@@ -6571,10 +6572,12 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 		return (SystemTime.getCurrentTime() - timeStartedBugFixFake) / 1000L;
 	}
 
+	/**
+	 * @deprecated Use {@link ShuUtils#randomFloatBetween(float, float)} instead
+	 */
+	@Deprecated
 	public static float unEntierAuHasardEntre(float min, float max){
-		double nombreReel = Math.random();
-		float resultat = (float)(nombreReel * (double)(max - min) + (double)min);
-		return resultat;
+		return ShuUtils.randomFloatBetween(min, max);
 	}
 
 	private void downloadManipulation(){
@@ -7079,7 +7082,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 
 			// Generate fake upload bytes
 			if(tabOption[33] && !stopUpload && !startSlow && !stopPeers){
-				long snt = (long)(unEntierAuHasardEntre(tabFloat[14], tabFloat[15]) * 1024.0F);
+				long snt = (long)(ShuUtils.randomFloatBetween(tabFloat[14], tabFloat[15]) * ShuUtils.BYTES_PER_KILOBYTE);
 				long totalSnt = snt + totalSentFake;
 				if(tabOption[38]){
 					snt = (long)((double)snt * ((double)totalReceivedFake / (double)fileSize));
@@ -7092,7 +7095,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 
 			// Generate fake download bytes
 			if(tabOption[34] && remaining > 0L && !stopDownload){
-				long rcv = (long)(unEntierAuHasardEntre(tabFloat[16], tabFloat[17]) * 1024.0F);
+				long rcv = (long)(ShuUtils.randomFloatBetween(tabFloat[16], tabFloat[17]) * ShuUtils.BYTES_PER_KILOBYTE);
 				long totalRcv = rcv + totalReceivedFake + doneAdjustment;
 				if(totalRcv > fileSize){
 					rcv -= totalRcv - fileSize;
@@ -7169,7 +7172,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 					// FakeUploadRatio (tabOption[8]) - ratio-based fake upload
 					float fakeUploadRatioValue = tabFloat[0];
 					float fakeUploadRatioValueMax = tabFloat[1];
-					float value = unEntierAuHasardEntre(fakeUploadRatioValue, fakeUploadRatioValueMax);
+					float value = ShuUtils.randomFloatBetween(fakeUploadRatioValue, fakeUploadRatioValueMax);
 					boolean fakeUploadRMContinue = tabOption[9];
 					boolean fakeUpRMIntelligent = tabOption[18];
 					long fileSize = getDiskManager().getTotalLength();
@@ -7216,7 +7219,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 						boolean showAsSeed = tabOption[12];
 						float fakeUploadMultiplierValue = tabFloat[6];
 						float fakeUploadMultiplierValueMax = tabFloat[7];
-						float value = unEntierAuHasardEntre(fakeUploadMultiplierValue, fakeUploadMultiplierValueMax);
+						float value = ShuUtils.randomFloatBetween(fakeUploadMultiplierValue, fakeUploadMultiplierValueMax);
 						sent += (long)((float)(sentReal - lastSentReal) * value);
 						if(showAsSeed){
 							checkNumberOfPeersAndTotalSent("Fake Upload upload Multiplier + Show As Seed", end);
@@ -7245,7 +7248,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 					boolean swarmSpeed = tabOption[19];
 					float swarmSpeedValue = (float)adapter.getDownload_manager().getStats().getTotalAveragePerPeer() / 1000.0F;
 					boolean isRatio = tabOption[16];
-					double rValue = (double)unEntierAuHasardEntre(fakeUploadSpeedRatioRValue, fakeUploadSpeedRatioRValueMax);
+					double rValue = (double)ShuUtils.randomFloatBetween(fakeUploadSpeedRatioRValue, fakeUploadSpeedRatioRValueMax);
 					long fakeSent = 0L;
 					float pourcentRealDone = (float)adapter.getDownload_manager().getStats().getDownloadCompleted(false) / 10.0F;
 					boolean startFakePourcentReached = tabOption[22];
@@ -7282,7 +7285,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 								fakeUploadSpeedRatioSValueMax = tabFloat[5];
 							}
 
-							sValue = swarmSpeed ? (swarmSpeedValue <= fakeUploadSpeedRatioSValueMax ? swarmSpeedValue : fakeUploadSpeedRatioSValueMax) : unEntierAuHasardEntre(fakeUploadSpeedRatioSValue, fakeUploadSpeedRatioSValueMax);
+							sValue = swarmSpeed ? (swarmSpeedValue <= fakeUploadSpeedRatioSValueMax ? swarmSpeedValue : fakeUploadSpeedRatioSValueMax) : ShuUtils.randomFloatBetween(fakeUploadSpeedRatioSValue, fakeUploadSpeedRatioSValueMax);
 							fakeSent += (long)((double)(1024.0F * sValue) * pourcent);
 							sent += fakeSent;
 						}

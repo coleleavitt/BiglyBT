@@ -79,6 +79,7 @@ import com.biglybt.pifimpl.local.download.DownloadImpl;
 import com.biglybt.plugin.extseed.ExternalSeedPlugin;
 import com.biglybt.plugin.tracker.dht.DHTTrackerPlugin;
 import com.biglybt.plugin.tracker.local.LocalTrackerPlugin;
+import shu.utils.ShuUtils;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -8015,10 +8016,12 @@ DownloadManagerImpl
 
 	// ===================== Extreme Mod: Fake Option Flags System =====================
 
+	/**
+	 * @deprecated Use {@link ShuUtils#randomFloatBetween(float, float)} instead
+	 */
+	@Deprecated
 	public static float unEntierAuHasardEntre(float min, float max) {
-		double nombreReel = Math.random();
-		float resultat = (float)(nombreReel * (double)(max - min) + (double)min);
-		return resultat;
+		return ShuUtils.randomFloatBetween(min, max);
 	}
 
 	// --- tabBool: boolean fake option flags ---

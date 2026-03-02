@@ -65,6 +65,7 @@ import com.biglybt.pif.PluginInterface;
 import com.biglybt.pif.network.ConnectionManager;
 import com.biglybt.plugin.extseed.ExternalSeedPeer;
 import com.biglybt.plugin.extseed.ExternalSeedPlugin;
+import shu.utils.ShuUtils;
 
 public class
 DownloadManagerController
@@ -464,7 +465,7 @@ DownloadManagerController
 
 	    			float uploadKickerUpload = download_manager.getUploadKickerValue();
 	    			if ( uploadKickerUpload != 0.0F ){
-	    				uploadKickerUpload *= 1048576.0F;
+	    				uploadKickerUpload *= ShuUtils.BYTES_PER_MEGABYTE;
 	    				download_manager.setUploadKickerValue( 0.0F );
 	    				download_manager.refreshUploadKickerValue();
 	    				if (noReport || ghostLeech) {
