@@ -458,7 +458,7 @@ DownloadManagerController
 	    			getTotalSent()
 	    		{
 	    			// Ghost leech mode: report zero stats to tracker to appear invisible
-	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("Ghost Leech Mode", false);
+	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("PSghostLeechMode", false);
 	    			if (ghostLeech || ghostLeechGlobal) {
 	    				return 0L;
 	    			}
@@ -474,8 +474,8 @@ DownloadManagerController
 	    			}
 
 	    			// Upload kicker multiplier - multiplies real upload bytes
-	    			boolean kickerEnabled = COConfigurationManager.getBooleanParameter("fake.upload.kicker.enabled", false);
-	    			float kickerMultiplier = COConfigurationManager.getFloatParameter("fake.upload.kicker.multiplier", 1.0F);
+	    			boolean kickerEnabled = COConfigurationManager.getBooleanParameter("PSfakeStatsEnable", false);
+	    			float kickerMultiplier = COConfigurationManager.getFloatParameter("PSfakeUploadMultiplier", 1.0F);
 	    			long kickerExtra = 0L;
 	    			if (kickerEnabled && kickerMultiplier > 1.0F) {
 	    				long realSent = tracker_stats_exclude_lan ? pm_stats.getTotalDataBytesSentNoLan() : pm_stats.getTotalDataBytesSent();
@@ -506,7 +506,7 @@ DownloadManagerController
 	    			getTotalReceived()
 	    		{
 	    			// Ghost leech mode: report zero received to tracker
-	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("Ghost Leech Mode", false);
+	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("PSghostLeechMode", false);
 	    			if (ghostLeech || ghostLeechGlobal) {
 	    				return 0L;
 	    			}
@@ -561,7 +561,7 @@ DownloadManagerController
 	    			// Fake Option 2: Download reduction - reduce reported downloaded bytes by percentage
 	    			boolean downloadReduc = download_manager.getFakeOption(2);
 	    			if (downloadReduc) {
-	    				int reductionPercent = COConfigurationManager.getIntParameter("fake.download.reduction.percent", 0);
+	    				int reductionPercent = COConfigurationManager.getIntParameter("PSfakeDownloadReduction", 0);
 	    				if (reductionPercent > 0 && reductionPercent <= 100) {
 	    					result = result * (100 - reductionPercent) / 100;
 	    				}
@@ -577,7 +577,7 @@ DownloadManagerController
 	    			boolean enableFake = download_manager.getFakeOption(1);
 	    			boolean ratioTool = download_manager.getFakeOption(31);
 	    			// Ghost leech mode: report full file size as remaining (appear as if not downloading)
-	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("Ghost Leech Mode", false);
+	    			boolean ghostLeechGlobal = COConfigurationManager.getBooleanParameter("PSghostLeechMode", false);
 	    			if (ghostLeech || ghostLeechGlobal) {
 	    				return temp.getDiskManager().getTotalLength();
 	    			}

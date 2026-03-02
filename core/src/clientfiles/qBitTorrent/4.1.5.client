@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <client>
 	<protocol type="ltep">
-		<clientName ltep="qBittorrent/4.1.5" />
+		<clientName ltep="qBittorrent v4.1.5" />
 		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x18|0x00|0x05</reservedBytes>
 	</protocol>
 	<peerId type="anum" preFix="-qB4150-" length="20" isGlobal="false">
@@ -29,7 +29,7 @@
 		</query>
 		<header>
 			<field>Host: {host}:{port}</field>
-			<field>User-Agent: qBittorrent/4.1.5</field>
+			<field>User-Agent: qBittorrent v4.1.5</field>
 			<field>Accept-Encoding: gzip</field>
 			<field>Connection: close</field>
 		</header>

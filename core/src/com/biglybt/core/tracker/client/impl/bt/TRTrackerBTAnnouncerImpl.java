@@ -2896,13 +2896,14 @@ TRTrackerBTAnnouncerImpl
   		// the client-id stuff RELIES on info_hash being the FIRST parameter added by
   		// us to the URL, so don't change it!
 
-  	request.append(info_hash);
+  request.append(info_hash);
 	System.out.println("[TrackerAnnounce] PerfectSpoof.isActive() = " + PerfectSpoof.isActive());
-	PSClient peerIdClient = PerfectSpoof.getClient();
-	System.out.println("[TrackerAnnounce] PerfectSpoof.getClient() = " + peerIdClient);
-	if (PerfectSpoof.isActive() && peerIdClient != null) {
+	// Cache PSClient once at start of constructRequest to avoid multiple getClient() calls
+	PSClient cachedClient = PerfectSpoof.getClient();
+	System.out.println("[TrackerAnnounce] PerfectSpoof.getClient() = " + cachedClient);
+	if (PerfectSpoof.isActive() && cachedClient != null) {
 		try {
-			byte[] spoofedPeerId = peerIdClient.getPeerId();
+			byte[] spoofedPeerId = cachedClient.getPeerId();
 			System.out.println("[TrackerAnnounce] Spoofed peer_id bytes: " + (spoofedPeerId != null ? new String(spoofedPeerId) : "null"));
 			if (spoofedPeerId != null) {
 				String encodedPeerId = URLEncoder.encode(
@@ -3043,9 +3044,9 @@ TRTrackerBTAnnouncerImpl
       int numwant = Math.min(calculateNumWant(),userMaxNumwant);
       // Override numwant with static value from .client profile when spoofing (e.g. qBittorrent uses 200)
       if (PerfectSpoof.isActive()) {
-          PSClient numwantClient = PerfectSpoof.getClient();
-          if (numwantClient != null && numwantClient.isStaticNumwant()) {
-              numwant = numwantClient.getStaticNumwant();
+          // Use cachedClient from method start
+          if (cachedClient != null && cachedClient.isStaticNumwant()) {
+              numwant = cachedClient.getStaticNumwant();
               System.out.println("[SPOOF-DEBUG] Overriding numwant with static value: " + numwant);
           }
       }
@@ -3226,10 +3227,10 @@ TRTrackerBTAnnouncerImpl
 
     if ( COConfigurationManager.getBooleanParameter("Tracker Key Enable Client", true )){
 
-    	PSClient keyClient = PerfectSpoof.getClient();
-    	if (PerfectSpoof.isActive() && keyClient != null) {
+	// Use cachedClient from method start
+	if (PerfectSpoof.isActive() && cachedClient != null) {
       		try {
-      			String spoofedKey = keyClient.getKey();
+      			String spoofedKey = cachedClient.getKey();
       			if (spoofedKey != null) {
       				request.append("&key=").append(spoofedKey);
       			} else {
@@ -3336,12 +3337,12 @@ TRTrackerBTAnnouncerImpl
 
   	String requestAsString = request.toString();
   	if (PerfectSpoof.isActive()) {
-  		PSClient psClient = PerfectSpoof.getClient();
-  		if (psClient != null) {
+		// Use cachedClient from method start
+		if (cachedClient != null) {
   			System.out.println("[SPOOF-DEBUG] ========== PRE-SPOOF URL ==========");
   			System.out.println("[SPOOF-DEBUG] BEFORE PSClient.getAnnounce(): " + requestAsString);
   			System.out.println("[SPOOF-DEBUG] paramIndex=" + paramIndex + " (base URL ends, params begin)");
-  			requestAsString = psClient.getAnnounce(requestAsString, paramIndex);
+  			requestAsString = cachedClient.getAnnounce(requestAsString, paramIndex);
   			System.out.println("[SPOOF-DEBUG] AFTER PSClient.getAnnounce():  " + requestAsString);
   			System.out.println("[SPOOF-DEBUG] ================================================");
   		} else {

@@ -2,8 +2,8 @@
 <client>
 	<protocol type="ltep">
 		<clientName ltep="KTorrent/5.2.0" />
-		<!-- Reserved bytes: DHT (0x01) + Fast Ext (0x04) + Ext Protocol (0x10) = 0x15 -->
-		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x15</reservedBytes>
+		<!-- Reserved bytes: byte 5 = Ext Protocol (0x10), byte 7 = DHT (0x01) + Fast Ext (0x04) = 0x05 -->
+		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x10|0x00|0x05</reservedBytes>
 	</protocol>
 	<peerId type="anum" preFix="-KT520-" length="20" isGlobal="false">
 		<charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>

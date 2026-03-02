@@ -24,6 +24,6 @@ sourceSets {
     }
 }
 
-tasks.withType<Copy> {
+tasks.named<ProcessResources>("processResources") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

@@ -6,11 +6,13 @@
 		<reservedBytes>0x00|0x00|0x00|0x00|0x00|0x18|0x00|0x05</reservedBytes> 
 	</protocol>
 	<!-- Zona peer_ids have random charSet in them between (0-9 A-Z a-z). Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
-	<peerId type="anum" preFix="-ZO2044-" length="20" isGlobal="false" />
-	    <charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	<peerId type="anum" preFix="-ZO2044-" length="20" isGlobal="false">
+		<charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	</peerId>
 	<!-- Zona keys have random charSet in them between (0-9 A-Z a-z). Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
-	<key type="anum" length="8" isGlobal="false" />
-	    <charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	<key type="anum" length="8" isGlobal="false">
+		<charSet>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</charSet>
+	</key>
 	<announce>
 	    <!-- Zona Info hash is sent with upper case. Windows 10-only? See http://www.sb-innovation.de/showthread.php?p=357389 -->
 		<infoHash isLowerCase="False" exceptions="!()*-._~" />

@@ -8,7 +8,7 @@
 		<charSet>ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_~()!.*-</charSet>
 	</peerId>
 	<key type="hex" length="8" isGlobal="false">
-		<charSet>ABCDEF123456789</charSet>
+		<charSet>0123456789ABCDEF</charSet>
 	</key>
 	<announce>
 		<infoHash isLowerCase="true" exceptions="_~()!.*-" />

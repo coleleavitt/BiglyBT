@@ -23,7 +23,7 @@ val swtArtifact = when {
 }
 
 dependencies {
-    implementation("org.eclipse.swt:$swtArtifact:$swtVersion")
+    compileOnly("org.eclipse.swt:$swtArtifact:$swtVersion")
 }
 
 group = "com.biglybt"

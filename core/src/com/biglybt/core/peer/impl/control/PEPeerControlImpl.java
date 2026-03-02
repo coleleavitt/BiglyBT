@@ -306,7 +306,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 	boolean[] tabGeneralOption;
 	long sentNEW = 0L;
 	boolean firstRun = true;
-	private static final java.math.BigDecimal ONE_HOUNDRED = new java.math.BigDecimal(100);
+	private static final java.math.BigDecimal ONE_HUNDRED = new java.math.BigDecimal(100);
 
 	private final PEPeerControlHashHandler hash_handler;
 
@@ -7044,7 +7044,7 @@ public class PEPeerControlImpl extends LogRelation implements PEPeerControl, Dis
 			long totalReceivedFake = adapter.getDownload_manager().getStats().getTotalDataBytesReceivedFake();
 			sentPrec = sent;
 			receivedPrec = received;
-			long doneAdjustment = (new java.math.BigDecimal(fileSize)).multiply(new java.math.BigDecimal((double)tabFloat[18])).divide(ONE_HOUNDRED).longValue();
+			long doneAdjustment = (new java.math.BigDecimal(fileSize)).multiply(new java.math.BigDecimal((double)tabFloat[18])).divide(ONE_HUNDRED).longValue();
 			remaining = fileSize - totalReceivedFake - doneAdjustment;
 			if(remaining < 0L){
 				remaining = 0L;

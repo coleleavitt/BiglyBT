@@ -146,10 +146,9 @@ public class PerfectSpoof {
 			System.out.println("[PerfectSpoof]   - Peer ID: " + new String(newClient.getPeerId()));
 			System.out.println("[PerfectSpoof]   - User Agent: " + newClient.getUserAgent());
 
-			PerfectSpoof newInstance = instance;
-			if (newInstance == null) {
-				newInstance = new PerfectSpoof();
-			}
+			// Always create a fresh instance to avoid race condition
+			// (concurrent readers may be accessing the old instance's maps)
+			PerfectSpoof newInstance = new PerfectSpoof();
 
 			// Configure HTTP headers from the loaded client profile
 			newInstance.configureHttpHeaders(client, newClient);
